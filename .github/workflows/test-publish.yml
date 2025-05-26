@@ -85,11 +85,14 @@ jobs:
           echo "📥 Testing installation from TestPyPI..."
           # Create fresh environment for testing
           uv venv test-env
-          source test-env/bin/activate
+          . test-env/bin/activate
+
+          # Install pytest first to ensure dependencies are from main PyPI
+          uv pip install pytest rich
 
           # Install from TestPyPI with retries
           for i in {1..5}; do
-            if pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pytest-async-benchmark==$TEST_VERSION; then
+            if uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pytest-async-benchmark==$TEST_VERSION; then
               echo "✅ Successfully installed from TestPyPI"
               break
             else
@@ -98,11 +101,11 @@ jobs:
             fi
           done
 
-          # Test basic import
-          python -c "import pytest_async_benchmark; print(f'✅ Import successful - version: {pytest_async_benchmark.__version__}')"
+          # Test basic import and version
+          uv run python -c "import pytest_async_benchmark; print(f'✅ Import successful - version: {pytest_async_benchmark.__version__}')"
 
           # Test pytest plugin discovery
-          python -c "import pytest; print('✅ Pytest can discover the plugin')" || echo "⚠️  Plugin discovery test failed"
+          uv run pytest --trace-config | grep pytest_async_benchmark || echo "⚠️ Plugin discovery test failed"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
