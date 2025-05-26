@@ -45,13 +45,20 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "release" ]; then
             VERSION="${{ github.event.release.tag_name }}"
-          else
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_type }}" == "tag" ]; then
+            VERSION="${{ github.ref_name }}"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
+          else
+            echo "❌ Unable to determine version from event: ${{ github.event_name }}"
+            exit 1
           fi
 
-          # Remove 'v' prefix if present
           VERSION=${VERSION#v}
 
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref type: ${{ github.ref_type }}"
+          echo "Ref name: ${{ github.ref_name }}"
           echo "Detected version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
