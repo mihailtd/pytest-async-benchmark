@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-async-benchmark"
-version = "0.1.0"
+version = "0.1.1"
 description = "pytest-async-benchmark: Modern pytest benchmarking for async code. 🚀"
 readme = "README.md"
 license = { file = "LICENSE" }
