@@ -1,0 +1,284 @@
+name: Release to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (must match git tag)"
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      is-prerelease: ${{ steps.check-prerelease.outputs.is-prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Get version from tag or input
+        id: get-version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+
+          echo "Detected version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify version consistency
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+
+          # Check pyproject.toml version
+          PYPROJECT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+
+          # Check __init__.py version
+          INIT_VERSION=$(grep '^__version__ = ' src/pytest_async_benchmark/__init__.py | sed 's/__version__ = "\(.*\)"/\1/')
+
+          echo "Tag/Input version: $VERSION"
+          echo "pyproject.toml version: $PYPROJECT_VERSION"
+          echo "__init__.py version: $INIT_VERSION"
+
+          if [ "$VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "❌ Version mismatch: tag ($VERSION) != pyproject.toml ($PYPROJECT_VERSION)"
+            exit 1
+          fi
+
+          if [ "$VERSION" != "$INIT_VERSION" ]; then
+            echo "❌ Version mismatch: tag ($VERSION) != __init__.py ($INIT_VERSION)"
+            exit 1
+          fi
+
+          echo "✅ All versions are consistent: $VERSION"
+
+      - name: Check if prerelease
+        id: check-prerelease
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is-prerelease=false" >> $GITHUB_OUTPUT
+            echo "✅ Stable release version: $VERSION"
+          else
+            echo "is-prerelease=true" >> $GITHUB_OUTPUT
+            echo "🧪 Pre-release version: $VERSION"
+          fi
+
+      - name: Run comprehensive release checks
+        run: |
+          echo "🔍 Running comprehensive release checks..."
+          python scripts/release-check.py
+
+  test-matrix:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    needs: validate-release
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies and run tests
+        run: |
+          echo "🧪 Testing on Python ${{ matrix.python-version }}..."
+          uv sync --dev
+          uv run pytest tests/ -v --tb=short
+
+          echo "📝 Testing examples..."
+          uv run python -m pytest examples/pytest_examples.py -v
+
+          echo "🔍 Testing plugin discovery..."
+          uv run python -c "import pytest_async_benchmark; print(f'✅ Plugin imported successfully - version: {pytest_async_benchmark.__version__}')"
+
+  build-and-publish:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [validate-release, test-matrix]
+    # Remove the if condition below or replace 'your-username' with your GitHub username
+    # if: github.repository_owner == 'your-username'
+
+    # Use the 'release' environment for additional security
+    environment: release
+
+    permissions:
+      contents: read
+      id-token: write # Required for trusted publishing to PyPI
+      attestations: write # Required for package attestations
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Build package
+        run: |
+          echo "🔨 Building package for release..."
+          uv build
+
+          echo "📦 Built packages:"
+          ls -la dist/
+
+          echo "📋 Package contents:"
+          for file in dist/*; do
+            echo "=== $file ==="
+            if [[ $file == *.whl ]]; then
+              python -m zipfile -l "$file"
+            elif [[ $file == *.tar.gz ]]; then
+              tar -tzf "$file" | head -20
+            fi
+            echo ""
+          done
+
+      - name: Generate package attestations
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "dist/*"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          print-hash: true
+          attestations: true
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist-${{ needs.validate-release.outputs.version }}
+          path: dist/
+          retention-days: 90
+
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [validate-release, build-and-publish]
+    if: always() && needs.build-and-publish.result == 'success'
+
+    steps:
+      - name: Wait for PyPI availability
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          echo "⏳ Waiting for package to be available on PyPI..."
+
+          for i in {1..10}; do
+            echo "🔍 Attempt $i: Checking PyPI availability..."
+            if curl -s "https://pypi.org/pypi/pytest-async-benchmark/$VERSION/json" | grep -q '"version"'; then
+              echo "✅ Package is available on PyPI!"
+              break
+            else
+              if [ $i -eq 10 ]; then
+                echo "⚠️  Package may not be immediately available on PyPI"
+              else
+                echo "⏳ Not available yet, waiting 30 seconds..."
+                sleep 30
+              fi
+            fi
+          done
+
+      - name: Test installation from PyPI
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          echo "📥 Testing installation from PyPI..."
+
+          # Create fresh environment for testing
+          python -m venv test-env
+          source test-env/bin/activate
+
+          # Install from PyPI
+          pip install pytest-async-benchmark==$VERSION
+
+          # Test basic functionality
+          python -c "
+          import pytest_async_benchmark
+          print(f'✅ Successfully installed from PyPI - version: {pytest_async_benchmark.__version__}')
+
+          # Test basic runner
+          import asyncio
+          from pytest_async_benchmark import AsyncBenchmarkRunner
+
+          async def test_func():
+              await asyncio.sleep(0.001)
+              return 'test'
+
+          async def main():
+              runner = AsyncBenchmarkRunner()
+              result = await runner.run(test_func, iterations=3)
+              print(f'✅ Basic benchmark test passed: {result.mean_time:.4f}s average')
+
+          asyncio.run(main())
+          "
+
+      - name: Create release summary
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type:** $([ "$IS_PRERELEASE" == "true" ] && echo "Pre-release 🧪" || echo "Stable Release ✅")" >> $GITHUB_STEP_SUMMARY
+          echo "- **PyPI URL:** https://pypi.org/project/pytest-async-benchmark/$VERSION/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Documentation:** https://github.com/${{ github.repository }}#readme" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Installation" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "pip install pytest-async-benchmark==$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "# or" >> $GITHUB_STEP_SUMMARY
+          echo "uv add pytest-async-benchmark==$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎉 What's New" >> $GITHUB_STEP_SUMMARY
+          echo "Check the [release notes](https://github.com/${{ github.repository }}/releases/tag/v$VERSION) for detailed changes." >> $GITHUB_STEP_SUMMARY
+
+          echo "🎉 Successfully released pytest-async-benchmark v$VERSION to PyPI!"
