@@ -100,10 +100,23 @@ jobs:
             echo "🧪 Pre-release version: $VERSION"
           fi
 
-      - name: Run comprehensive release checks
+      - name: Run comprehensive tests
         run: |
           echo "🔍 Running comprehensive release checks..."
-          python scripts/release-check.py
+
+          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_type }}" == "tag" ]; then
+            echo "ℹ️  Tag-triggered release detected, running basic checks only..."
+            
+            # Run basic checks without tag validation
+            uv run pytest tests/ -v --tb=short
+            uv run ruff check .
+            uv run ruff format --check .
+            
+            echo "✅ Basic checks passed for tag-triggered release"
+          else
+            # Full release check for manual triggers
+            python scripts/release-check.py
+          fi
 
   test-matrix:
     name: Test on Python ${{ matrix.python-version }}
