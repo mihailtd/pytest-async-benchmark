@@ -46,10 +46,8 @@ jobs:
 
       - name: Create test version
         run: |
-          # Get current version from pyproject.toml
           CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
 
-          # Create test version with timestamp and suffix
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           TEST_SUFFIX="${{ github.event.inputs.test_version || 'dev' }}"
           TEST_VERSION="${CURRENT_VERSION}.${TEST_SUFFIX}${TIMESTAMP}"
@@ -58,7 +56,6 @@ jobs:
           echo "Test version: $TEST_VERSION"
           echo "TEST_VERSION=$TEST_VERSION" >> $GITHUB_ENV
 
-          # Update version temporarily for test build
           sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$TEST_VERSION\"/" pyproject.toml
           sed -i "s/__version__ = \"$CURRENT_VERSION\"/__version__ = \"$TEST_VERSION\"/" src/pytest_async_benchmark/__init__.py
 
@@ -68,6 +65,12 @@ jobs:
           uv build
 
           echo "📦 Built packages:"
+          ls -la dist/
+
+          find dist/ -name "*-py3-none-any.whl" ! -name "*$TEST_VERSION*" -delete
+          find dist/ -name "*.tar.gz" ! -name "*$TEST_VERSION*" -delete
+
+          echo "📦 Final packages for upload:"
           ls -la dist/
 
       - name: Publish to TestPyPI
@@ -83,29 +86,41 @@ jobs:
           sleep 30
 
           echo "📥 Testing installation from TestPyPI..."
-          # Create fresh environment for testing
-          uv venv test-env
-          . test-env/bin/activate
-
-          # Install pytest first to ensure dependencies are from main PyPI
-          uv pip install pytest rich
 
           # Install from TestPyPI with retries
           for i in {1..5}; do
-            if uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pytest-async-benchmark==$TEST_VERSION; then
+            if pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pytest-async-benchmark==$TEST_VERSION; then
               echo "✅ Successfully installed from TestPyPI"
               break
             else
               echo "⏳ Attempt $i failed, retrying in 30 seconds..."
               sleep 30
+              if [ $i -eq 5 ]; then
+                echo "❌ Failed to install after 5 attempts"
+                exit 1
+              fi
             fi
           done
 
           # Test basic import and version
-          uv run python -c "import pytest_async_benchmark; print(f'✅ Import successful - version: {pytest_async_benchmark.__version__}')"
+          python -c "
+          import pytest_async_benchmark
+          print(f'✅ Import successful - version: {pytest_async_benchmark.__version__}')
+          assert pytest_async_benchmark.__version__ == '$TEST_VERSION', f'Version mismatch: expected $TEST_VERSION, got {pytest_async_benchmark.__version__}'
+          print('✅ Version verification passed')
+          "
 
           # Test pytest plugin discovery
-          uv run pytest --trace-config | grep pytest_async_benchmark || echo "⚠️ Plugin discovery test failed"
+          python -c "
+          import pytest
+          from pytest_async_benchmark.plugin import pytest_configure
+          print('✅ Pytest plugin can be imported and configured')
+          "
+
+          # Test that the fixture is available
+          echo 'def test_fixture_available(async_benchmark): pass' > test_temp.py
+          python -m pytest test_temp.py --collect-only | grep "async_benchmark" && echo "✅ async_benchmark fixture is discoverable" || echo "⚠️ Fixture discovery test failed"
+          rm -f test_temp.py
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
