@@ -3,7 +3,7 @@
 import asyncio
 import statistics
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 
 class AsyncBenchmarkRunner:
@@ -19,7 +19,7 @@ class AsyncBenchmarkRunner:
         self.iterations = iterations or 1
         self.warmup_rounds = warmup_rounds
 
-    async def run(self, func: Callable, *args, **kwargs) -> Dict[str, Any]:
+    async def run(self, func: Callable, *args, **kwargs) -> dict[str, Any]:
         """Run benchmark for an async function."""
         if not asyncio.iscoroutinefunction(func):
             raise ValueError("Function must be async (coroutine function)")
@@ -27,10 +27,10 @@ class AsyncBenchmarkRunner:
         for _ in range(self.warmup_rounds):
             await func(*args, **kwargs)
 
-        times: List[float] = []
+        times: list[float] = []
 
         for _ in range(self.rounds):
-            round_times: List[float] = []
+            round_times: list[float] = []
 
             for _ in range(self.iterations):
                 start_time = time.perf_counter()
@@ -42,7 +42,7 @@ class AsyncBenchmarkRunner:
 
         return self._calculate_stats(times)
 
-    def _calculate_stats(self, times: List[float]) -> Dict[str, Any]:
+    def _calculate_stats(self, times: list[float]) -> dict[str, Any]:
         """Calculate statistics from timing data."""
         return {
             "min": min(times),

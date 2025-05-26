@@ -1,20 +1,20 @@
 """Statistics calculation for async benchmarks."""
 
 import statistics
-from typing import List, Dict, Any
+from typing import Any
 
 
 class StatsContainer:
     """Container for benchmark statistics calculation."""
 
     def __init__(self):
-        self.measurements: List[float] = []
+        self.measurements: list[float] = []
 
     def add_measurement(self, duration: float):
         """Add a timing measurement."""
         self.measurements.append(duration)
 
-    def calculate_stats(self) -> Dict[str, Any]:
+    def calculate_stats(self) -> dict[str, Any]:
         """Calculate comprehensive statistics."""
         if not self.measurements:
             return {}

@@ -11,6 +11,7 @@ This example shows how to benchmark various types of async operations:
 """
 
 import asyncio
+
 import pytest
 
 
@@ -65,10 +66,8 @@ class TestAsyncBenchmarkExamples:
         assert result["rounds"] == 5
         assert result["iterations"] == 1
 
-
         assert result["mean"] >= 0.001
         assert result["mean"] < 0.01
-
 
         assert result["stddev"] < result["mean"] * 0.5
 
@@ -149,9 +148,7 @@ class TestAsyncBenchmarkExamples:
 
         assert len(result["raw_times"]) == 10
         assert result["min"] <= result["median"] <= result["max"]
-        assert (
-            result["min"] <= result["mean"] <= result["max"]
-        )
+        assert result["min"] <= result["mean"] <= result["max"]
 
         cv = result["stddev"] / result["mean"]
         assert cv < 0.3

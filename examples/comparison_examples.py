@@ -11,11 +11,12 @@ This example demonstrates the comparison tools:
 
 import asyncio
 import time
+
 from pytest_async_benchmark import (
     BenchmarkComparator,
     BenchmarkScenario,
-    quick_compare,
     a_vs_b_comparison,
+    quick_compare,
 )
 
 

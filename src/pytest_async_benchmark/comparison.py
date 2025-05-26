@@ -5,15 +5,17 @@ This module provides high-level utilities for comparing multiple benchmark resul
 and displaying them in various formats.
 """
 
-from typing import List, Dict, Any, Callable, Awaitable, Optional
+from collections.abc import Awaitable
 from dataclasses import dataclass
+from typing import Any, Callable, Optional
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from .runner import AsyncBenchmarkRunner
-from .display import display_comparison_table, format_time, format_speedup
 from .analytics import compare_benchmarks, performance_grade
+from .display import display_comparison_table, format_speedup, format_time
+from .runner import AsyncBenchmarkRunner
 
 
 @dataclass
@@ -33,7 +35,7 @@ class BenchmarkComparator:
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
         self.runner = AsyncBenchmarkRunner()
-        self.results: List[Dict[str, Any]] = []
+        self.results: list[dict[str, Any]] = []
 
     async def add_scenario(
         self,
@@ -42,7 +44,7 @@ class BenchmarkComparator:
         rounds: int = 5,
         iterations: int = 10,
         description: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add and run a benchmark scenario."""
         scenario = BenchmarkScenario(name, func, rounds, iterations, description)
 
@@ -107,7 +109,7 @@ class BenchmarkComparator:
 
         self.console.print(Panel(analysis_text, title="Performance Summary"))
 
-    def display_performance_grades(self, thresholds: Optional[Dict[str, float]] = None):
+    def display_performance_grades(self, thresholds: Optional[dict[str, float]] = None):
         """Display performance grades for all scenarios."""
         if not self.results:
             self.console.print("❌ No results to grade")
@@ -154,21 +156,21 @@ class BenchmarkComparator:
 
         self.console.print(table)
 
-    def get_fastest_scenario(self) -> Optional[Dict[str, Any]]:
+    def get_fastest_scenario(self) -> Optional[dict[str, Any]]:
         """Get the scenario with the fastest mean time."""
         if not self.results:
             return None
 
         return min(self.results, key=lambda r: r["result"]["mean"])
 
-    def get_most_stable_scenario(self) -> Optional[Dict[str, Any]]:
+    def get_most_stable_scenario(self) -> Optional[dict[str, Any]]:
         """Get the scenario with the lowest standard deviation."""
         if not self.results:
             return None
 
         return min(self.results, key=lambda r: r["result"]["stddev"])
 
-    def export_results(self) -> List[Dict[str, Any]]:
+    def export_results(self) -> list[dict[str, Any]]:
         """Export all results for external analysis."""
         return [
             {
@@ -191,7 +193,7 @@ class BenchmarkComparator:
 
 
 async def quick_compare(
-    scenarios: List[BenchmarkScenario],
+    scenarios: list[BenchmarkScenario],
     title: str = "🚀 Quick Benchmark Comparison",
     console: Optional[Console] = None,
 ) -> BenchmarkComparator:

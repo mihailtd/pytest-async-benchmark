@@ -1,6 +1,7 @@
 """Tests for pytest-async-benchmark."""
 
 import asyncio
+
 import pytest
 
 

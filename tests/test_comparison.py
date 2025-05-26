@@ -1,17 +1,18 @@
 """Tests for comparison functionality."""
 
-import pytest
 import asyncio
 from io import StringIO
+
+import pytest
+from rich.console import Console
 
 from pytest_async_benchmark.comparison import (
     BenchmarkComparator,
     BenchmarkScenario,
-    quick_compare,
     a_vs_b_comparison,
+    quick_compare,
 )
 from pytest_async_benchmark.display import display_comparison_table
-from rich.console import Console
 
 
 class TestBenchmarkComparator:

@@ -1,6 +1,7 @@
 """Demo tests showing pytest-async-benchmark in action."""
 
 import asyncio
+
 import pytest
 
 

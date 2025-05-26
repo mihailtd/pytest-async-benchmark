@@ -393,10 +393,66 @@ uv run pytest tests/ -v
 uv run pytest examples/pytest_examples.py -v
 
 # Test real-world Quart API comparison
-python examples/quart_api_comparison.py
+uv run python examples/quart_api_comparison.py
 
 # See advanced comparison features
-python examples/comparison_examples.py
+uv run python examples/comparison_examples.py
+```
+
+### 🛠️ Code Quality and Formatting
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting:
+
+```bash
+# Check code for linting issues
+uv run ruff check .
+
+# Fix auto-fixable linting issues
+uv run ruff check . --fix
+
+# Check code formatting
+uv run ruff format --check .
+
+# Format code automatically
+uv run ruff format .
+
+# Run both linting and formatting in one go
+uv run ruff check . --fix && uv run ruff format .
+
+# Run all quality checks at once (linting, formatting, and tests)
+uv run python scripts/quality-check.py
+```
+
+### 📋 Release Readiness Check
+
+Before creating a release, verify everything is ready:
+
+```bash
+# Run comprehensive release check
+uv run python scripts/release-check.py
+
+# This checks:
+# ✅ Git repository status
+# ✅ Version consistency 
+# ✅ Code formatting and linting
+# ✅ Test suite passes
+# ✅ Package builds successfully
+# ✅ All required files exist
+```
+
+### 🚀 Quick Quality Check
+
+Run all quality checks at once:
+
+```bash
+# Run linting, formatting, tests, and release checks
+python scripts/quality-check.py
+
+# This will:
+# 🔧 Fix linting issues automatically
+# 🎨 Format code with Ruff
+# 🧪 Run the full test suite
+# 📋 Check release readiness
 ```
 
 ## 🚀 Automated Releases
@@ -411,7 +467,7 @@ This project uses GitHub Actions for automated testing and publishing to PyPI:
 ### Creating a Release
 
 1. Update version in `pyproject.toml` and `src/pytest_async_benchmark/__init__.py`
-2. Run `python scripts/release-check.py` to verify readiness
+2. Run `uv run python scripts/release-check.py` to verify readiness
 3. Create a git tag: `git tag v1.0.0 && git push origin v1.0.0`
 4. Create a GitHub release to trigger automated PyPI publishing
 

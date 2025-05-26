@@ -7,11 +7,12 @@ different API endpoints, simulating v1 vs v2 performance comparisons.
 """
 
 import asyncio
-from quart import Quart, jsonify, request
+
 import pytest
+from quart import Quart, jsonify, request
 
 app = Quart(__name__)
-)
+
 USER_DATA = {
     str(i): {
         "id": i,
@@ -149,8 +150,9 @@ class TestAPIComparison:
 
 async def manual_comparison_example():
     """Example of manually running and comparing benchmarks."""
-    from pytest_async_benchmark.comparison import BenchmarkComparator
     from rich.console import Console
+
+    from pytest_async_benchmark.comparison import BenchmarkComparator
 
     console = Console()
     console.print("🚀 Starting Manual API Comparison\n")
@@ -198,8 +200,9 @@ async def manual_comparison_example():
 
 async def comprehensive_api_comparison():
     """Compare multiple endpoints across versions using the new comparator."""
-    from pytest_async_benchmark.comparison import BenchmarkScenario, quick_compare
     from rich.console import Console
+
+    from pytest_async_benchmark.comparison import BenchmarkScenario, quick_compare
 
     console = Console()
     console.print("🏁 Comprehensive API Performance Analysis\n")
@@ -277,8 +280,9 @@ async def comprehensive_api_comparison():
 
 async def load_testing_simulation():
     """Simulate load testing with different concurrency levels."""
-    from pytest_async_benchmark.comparison import a_vs_b_comparison
     from rich.console import Console
+
+    from pytest_async_benchmark.comparison import a_vs_b_comparison
 
     console = Console()
     console.print("⚡ Load Testing Simulation\n")

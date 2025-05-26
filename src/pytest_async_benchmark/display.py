@@ -1,6 +1,7 @@
 """Display utilities for async benchmarking."""
 
-from typing import Optional, Dict, List, Any
+from typing import Any, Optional
+
 from rich.console import Console
 from rich.table import Table
 
@@ -36,7 +37,7 @@ def format_speedup(ratio: float) -> str:
 
 
 def display_comparison_table(
-    comparisons: List[Dict[str, Any]],
+    comparisons: list[dict[str, Any]],
     title: str = "🚀 Async Benchmark Comparison",
     console: Optional[Console] = None,
 ) -> None:

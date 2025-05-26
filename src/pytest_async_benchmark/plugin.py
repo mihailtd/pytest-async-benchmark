@@ -1,14 +1,14 @@
 """Core pytest plugin for async benchmarking."""
 
 import asyncio
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 import pytest
 from rich.console import Console
 from rich.table import Table
 
-from .runner import AsyncBenchmarkRunner
 from .display import format_time
+from .runner import AsyncBenchmarkRunner
 
 
 class AsyncBenchmarkFixture:
@@ -17,7 +17,7 @@ class AsyncBenchmarkFixture:
     def __init__(self, request: pytest.FixtureRequest):
         self.request = request
         self.console = Console()
-        self.results: Dict[str, Any] = {}
+        self.results: dict[str, Any] = {}
 
     def __call__(
         self,
@@ -51,7 +51,7 @@ class AsyncBenchmarkFixture:
 
         return result
 
-    def _display_results(self, test_name: str, result: Dict[str, Any]):
+    def _display_results(self, test_name: str, result: dict[str, Any]):
         """Display benchmark results using rich."""
         table = Table(title=f"🚀 Async Benchmark Results: {test_name}")
 

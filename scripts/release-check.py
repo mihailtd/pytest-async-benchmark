@@ -15,7 +15,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
 class Colors:
@@ -32,7 +31,7 @@ class Colors:
     END = "\033[0m"
 
 
-def run_command(cmd: str, cwd: str = None) -> Tuple[bool, str, str]:
+def run_command(cmd: str, cwd: str = None) -> tuple[bool, str, str]:
     """Run a command and return success status, stdout, and stderr."""
     try:
         result = subprocess.run(
@@ -66,7 +65,7 @@ def print_info(message: str) -> None:
     print(f"{Colors.CYAN}ℹ️  {message}{Colors.END}")
 
 
-def check_git_status() -> List[str]:
+def check_git_status() -> list[str]:
     """Check git repository status."""
     issues = []
 
@@ -107,7 +106,7 @@ def check_git_status() -> List[str]:
     return issues
 
 
-def check_version_consistency() -> Tuple[List[str], str]:
+def check_version_consistency() -> tuple[list[str], str]:
     """Check version consistency across files."""
     issues = []
     version = None
@@ -155,7 +154,7 @@ def check_version_consistency() -> Tuple[List[str], str]:
     return issues, version
 
 
-def check_required_files() -> List[str]:
+def check_required_files() -> list[str]:
     """Check that all required files exist."""
     issues = []
 
@@ -180,7 +179,7 @@ def check_required_files() -> List[str]:
     return issues
 
 
-def check_package_configuration() -> List[str]:
+def check_package_configuration() -> list[str]:
     """Check package configuration in pyproject.toml."""
     issues = []
 
@@ -213,7 +212,7 @@ def check_package_configuration() -> List[str]:
     return issues
 
 
-def check_tests() -> List[str]:
+def check_tests() -> list[str]:
     """Run the test suite."""
     issues = []
 
@@ -279,7 +278,7 @@ def check_tests() -> List[str]:
     return issues
 
 
-def check_package_build() -> List[str]:
+def check_package_build() -> list[str]:
     """Check that the package builds successfully."""
     issues = []
 
@@ -340,7 +339,7 @@ def check_package_build() -> List[str]:
     return issues
 
 
-def print_summary(all_issues: List[str], version: str) -> bool:
+def print_summary(all_issues: list[str], version: str) -> bool:
     """Print the final summary and next steps."""
     print_header("📊 Release Readiness Summary")
 

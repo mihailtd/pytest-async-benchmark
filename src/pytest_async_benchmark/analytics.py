@@ -1,12 +1,12 @@
 """Additional utilities for pytest-async-benchmark."""
 
 import statistics
-from typing import List, Dict, Any
+from typing import Any
 
 
 def compare_benchmarks(
-    result1: Dict[str, Any], result2: Dict[str, Any]
-) -> Dict[str, float]:
+    result1: dict[str, Any], result2: dict[str, Any]
+) -> dict[str, float]:
     """Compare two benchmark results and return relative performance metrics."""
     return {
         "mean_ratio": result2["mean"] / result1["mean"],
@@ -17,7 +17,7 @@ def compare_benchmarks(
     }
 
 
-def benchmark_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def benchmark_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Create a summary of multiple benchmark results."""
     all_means = [r["mean"] for r in results]
     all_stddevs = [r["stddev"] for r in results]
@@ -33,7 +33,7 @@ def benchmark_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def performance_grade(result: Dict[str, Any], thresholds: Dict[str, float]) -> str:
+def performance_grade(result: dict[str, Any], thresholds: dict[str, float]) -> str:
     """Grade performance based on configurable thresholds."""
     mean_time = result["mean"]
 
