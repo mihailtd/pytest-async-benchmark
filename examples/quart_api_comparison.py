@@ -80,7 +80,7 @@ async def list_users_v2():
 class TestAPIComparison:
     """Test suite for comparing API endpoint performance."""
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="function")
     async def app_server(self):
         """Start the Quart test server."""
         return app.test_client()

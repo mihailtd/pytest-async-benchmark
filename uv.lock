@@ -890,18 +890,22 @@ wheels = [
 
 [[package]]
 name = "pytest-async-benchmark"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "pytest" },
     { name = "rich" },
 ]
 
+[package.optional-dependencies]
+asyncio = [
+    { name = "pytest-asyncio" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "aiohttp" },
     { name = "pre-commit" },
-    { name = "pytest-asyncio" },
     { name = "quart" },
     { name = "ruff" },
 ]
@@ -909,14 +913,15 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-asyncio", marker = "extra == 'asyncio'", specifier = ">=0.23.0" },
     { name = "rich", specifier = ">=14.0.0" },
 ]
+provides-extras = ["asyncio"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "aiohttp", specifier = ">=3.12.1" },
     { name = "pre-commit", specifier = ">=3.6.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "quart", specifier = ">=0.20.0" },
     { name = "ruff", specifier = ">=0.11.11" },
 ]

@@ -284,6 +284,18 @@ def check_package_build() -> list[str]:
 
     print_header("🔨 Package Build Check")
 
+    # Clean up any existing build artifacts to prevent conflicts
+    dist_path = Path("dist")
+    if dist_path.exists():
+        print_info("Cleaning up existing build artifacts...")
+        try:
+            import shutil
+
+            shutil.rmtree(dist_path)
+            print_check(True, "Cleaned existing dist/ directory")
+        except Exception as e:
+            print_warning(f"Could not clean dist/ directory: {e}")
+
     print_info("Building package...")
     success, stdout, stderr = run_command("uv build")
     if success:

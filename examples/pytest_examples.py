@@ -59,9 +59,10 @@ async def async_context_operation():
 class TestAsyncBenchmarkExamples:
     """Example test class showing various benchmarking patterns."""
 
-    def test_simple_function_benchmark(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_simple_function_benchmark(self, async_benchmark):
         """Benchmark a simple async function."""
-        result = async_benchmark(simple_delay, 2.0, rounds=5)
+        result = await async_benchmark(simple_delay, 2.0, rounds=5)
 
         assert result["rounds"] == 5
         assert result["iterations"] == 1
@@ -71,9 +72,10 @@ class TestAsyncBenchmarkExamples:
 
         assert result["stddev"] < result["mean"] * 0.5
 
-    def test_cpu_bound_benchmark(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_cpu_bound_benchmark(self, async_benchmark):
         """Benchmark CPU-bound async operation."""
-        result = async_benchmark(
+        result = await async_benchmark(
             cpu_bound_async,
             500,
             rounds=3,
@@ -84,9 +86,10 @@ class TestAsyncBenchmarkExamples:
         assert result["iterations"] == 2
         assert result["min"] > 0
 
-    def test_data_fetching_benchmark(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_data_fetching_benchmark(self, async_benchmark):
         """Benchmark simulated data fetching."""
-        result = async_benchmark(
+        result = await async_benchmark(
             fetch_data_simulation,
             items=5,
             delay_per_item=0.5,
@@ -96,22 +99,25 @@ class TestAsyncBenchmarkExamples:
         assert result["mean"] > 0.001
         assert result["mean"] < 0.01
 
-    def test_context_manager_benchmark(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_context_manager_benchmark(self, async_benchmark):
         """Benchmark async context manager operations."""
-        result = async_benchmark(async_context_operation, rounds=4)
+        result = await async_benchmark(async_context_operation, rounds=4)
 
         assert result["mean"] > 0.003
         assert result["rounds"] == 4
 
     @pytest.mark.async_benchmark
-    def test_marked_benchmark(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_marked_benchmark(self, async_benchmark):
         """Test with async_benchmark marker for organization."""
-        result = async_benchmark(simple_delay, 1.0, rounds=2)
+        result = await async_benchmark(simple_delay, 1.0, rounds=2)
         assert result is not None
 
-    def test_benchmark_with_warmup(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_benchmark_with_warmup(self, async_benchmark):
         """Test with custom warmup rounds."""
-        result = async_benchmark(
+        result = await async_benchmark(
             simple_delay,
             1.5,
             rounds=3,
@@ -121,37 +127,44 @@ class TestAsyncBenchmarkExamples:
         assert result["rounds"] == 3
         assert result["mean"] > 0.001
 
-    def test_error_handling(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_error_handling(self, async_benchmark):
         """Test that non-async functions raise appropriate errors."""
 
         def sync_function():
             return "not async"
 
         with pytest.raises(ValueError, match="Function must be async"):
-            async_benchmark(sync_function)
+            await async_benchmark(sync_function)
 
-    def test_performance_regression_detection(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_performance_regression_detection(self, async_benchmark):
         """Example of using benchmarks for performance regression testing."""
 
-        fast_result = async_benchmark(simple_delay, 0.5, rounds=5)
+        fast_result = await async_benchmark(simple_delay, 0.5, rounds=5)
 
-        slow_result = async_benchmark(simple_delay, 3.0, rounds=5)
+        slow_result = await async_benchmark(simple_delay, 3.0, rounds=5)
 
+        # Performance comparison assertions
         assert slow_result["mean"] > fast_result["mean"] * 2
 
+        # Performance budget assertions
         assert fast_result["mean"] < 0.002
         assert slow_result["mean"] < 0.005
 
-    def test_statistical_analysis(self, async_benchmark):
+    @pytest.mark.asyncio
+    async def test_statistical_analysis(self, async_benchmark):
         """Example showing how to analyze benchmark statistics."""
-        result = async_benchmark(simple_delay, 1.0, rounds=10, iterations=3)
+        result = await async_benchmark(simple_delay, 1.0, rounds=10, iterations=3)
 
+        # Verify raw data structure
         assert len(result["raw_times"]) == 10
         assert result["min"] <= result["median"] <= result["max"]
         assert result["min"] <= result["mean"] <= result["max"]
 
+        # Check coefficient of variation (relative standard deviation)
         cv = result["stddev"] / result["mean"]
-        assert cv < 0.3
+        assert cv < 0.3  # Should have reasonable consistency
 
 
 if __name__ == "__main__":

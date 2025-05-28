@@ -267,5 +267,5 @@ git commit -m "feat!: redesign API for better async support
 BREAKING CHANGE: AsyncBenchmarkRunner.run() now returns BenchmarkResult object instead of dict"
 git tag v2.0.0
 git push origin main --tags
-# Create GitHub release with migration guide
+# Create GitHub release with changelog
 ```

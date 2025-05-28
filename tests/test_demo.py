@@ -23,26 +23,30 @@ async def async_computation(n: int):
     return sum(range(n))
 
 
-def test_demo_fast_operation(async_benchmark):
+@pytest.mark.asyncio
+async def test_demo_fast_operation(async_benchmark):
     """Benchmark a fast async operation."""
-    result = async_benchmark(fast_async_operation, rounds=5, iterations=3)
+    result = await async_benchmark(fast_async_operation, rounds=5, iterations=3)
     assert result["mean"] < 0.01
 
 
-def test_demo_slow_operation(async_benchmark):
+@pytest.mark.asyncio
+async def test_demo_slow_operation(async_benchmark):
     """Benchmark a slower async operation."""
-    result = async_benchmark(slow_async_operation, rounds=3, iterations=2)
+    result = await async_benchmark(slow_async_operation, rounds=3, iterations=2)
     assert result["mean"] > 0.004
 
 
-def test_demo_computation_with_params(async_benchmark):
+@pytest.mark.asyncio
+async def test_demo_computation_with_params(async_benchmark):
     """Benchmark async computation with parameters."""
-    result = async_benchmark(async_computation, 100, rounds=4)
+    result = await async_benchmark(async_computation, 100, rounds=4)
     assert result["rounds"] == 4
 
 
 @pytest.mark.async_benchmark
-def test_demo_marked_operation(async_benchmark):
+@pytest.mark.asyncio
+async def test_demo_marked_operation(async_benchmark):
     """Test with async_benchmark marker."""
-    result = async_benchmark(fast_async_operation, rounds=2)
+    result = await async_benchmark(fast_async_operation, rounds=2)
     assert result is not None

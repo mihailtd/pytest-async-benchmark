@@ -5,8 +5,8 @@ Modern pytest benchmarking for async code with beautiful terminal output and adv
 ## ✨ Features
 
 - 🎯 **Async-First**: Designed specifically for benchmarking `async def` functions
-- 🔌 **Pytest Integration**: Seamless integration as a pytest plugin
-- 🎨 **Rich Output**: Beautiful terminal reporting!
+- 🔌 **Pytest Integration**: Seamless integration as a pytest plugin with full **pytest-asyncio** support
+- 🎨 **Rich Output**: Beautiful terminal reporting powered by Rich!
 - 📊 **Comprehensive Stats**: Min, max, mean, median, std dev, percentiles, and more
 - ⚖️ **A vs B Comparisons**: Compare different implementations side-by-side
 - 📈 **Multi-Scenario Analysis**: Benchmark multiple scenarios with detailed comparison tables
@@ -14,17 +14,58 @@ Modern pytest benchmarking for async code with beautiful terminal output and adv
 - ⚡ **Auto Calibration**: Intelligent round and iteration detection
 - 🔄 **Quick Compare**: One-line comparison utilities
 - 🏆 **Winner Detection**: Automatic identification of best-performing implementation
-- 🚀 **Easy to Use**: Simple fixture-based API
+- 🚀 **Easy to Use**: Simple fixture-based API with native `async`/`await` support
+- 🔧 **pytest-asyncio Compatible**: Works perfectly with pytest-asyncio's event loop management
 
 ## 📦 Installation
 
+### For Existing pytest-asyncio Users 🚀
+**Already testing async APIs (FastAPI, Quart, aiohttp)?** You're all set with the basic installation:
+
 ```bash
-uv add pytest-async-benchmark
-# or
 pip install pytest-async-benchmark
+# or
+uv add pytest-async-benchmark
+```
+
+You'll get the full async/await experience immediately since you already have pytest-asyncio!
+
+### For New Users
+Choose your installation based on your needs:
+
+```bash
+# Full installation with async/await support (recommended)
+pip install pytest-async-benchmark[asyncio]
+uv add pytest-async-benchmark --optional asyncio
+
+# Basic installation (simple interface)
+pip install pytest-async-benchmark
+uv add pytest-async-benchmark
+```
+
+### Quick Check ✅
+Already using `@pytest.mark.asyncio` in your tests? Then the basic installation is all you need:
+
+```python
+# If you already have tests like this:
+@pytest.mark.asyncio
+async def test_my_api():
+    # Your existing async test code
+    pass
+
+# Then just add pytest-async-benchmark and use:
+@pytest.mark.asyncio
+async def test_my_api_performance(async_benchmark):
+    result = await async_benchmark(my_async_function)
+    assert result['mean'] < 0.01
 ```
 
 ## 🚀 Quick Start
+
+pytest-async-benchmark automatically adapts to your environment, providing **two convenient interfaces**:
+
+### Async Interface (with pytest-asyncio)
+When pytest-asyncio is installed, use the natural async/await syntax:
 
 ```python
 import asyncio
@@ -34,26 +75,190 @@ async def slow_async_operation():
     await asyncio.sleep(0.01)  # 10ms
     return "result"
 
-def test_async_performance(async_benchmark):
-    result = async_benchmark(slow_async_operation, rounds=5)
+@pytest.mark.asyncio
+@pytest.mark.async_benchmark(rounds=5, iterations=10)
+async def test_async_performance(async_benchmark):
+    # Use await with pytest-asyncio for best experience
+    result = await async_benchmark(slow_async_operation)
+    
+    # Your assertions here
+    assert result['mean'] < 0.02
+```
+
+### Simple Interface (without pytest-asyncio)
+For simpler setups, the sync interface works automatically:
+
+```python
+import asyncio
+import pytest
+
+async def slow_async_operation():
+    await asyncio.sleep(0.01)
+    return "result"
+
+@pytest.mark.async_benchmark(rounds=5, iterations=10)
+def test_sync_performance(async_benchmark):
+    # No await needed - sync interface
+    result = async_benchmark(slow_async_operation)
     
     # Your assertions here
     assert result['mean'] < 0.02  # Should complete in under 20ms
 ```
 
+### Flexible Configuration Syntax
+
+pytest-async-benchmark supports **two syntax options** for configuring benchmarks:
+
+#### Option 1: Marker Syntax (Recommended)
+```python
+@pytest.mark.async_benchmark(rounds=5, iterations=10)
+async def test_with_marker(async_benchmark):
+    result = await async_benchmark(slow_async_operation)
+    assert result['rounds'] == 5  # From marker
+```
+
+#### Option 2: Function Parameter Syntax
+```python
+async def test_with_parameters(async_benchmark):
+    result = await async_benchmark(slow_async_operation, rounds=5, iterations=10)
+    assert result['rounds'] == 5  # From function parameters
+```
+
+## 🔧 Interface Detection & Flexibility
+
+pytest-async-benchmark **automatically detects** your environment and provides the best interface:
+
+### With pytest-asyncio (Recommended)
+When pytest-asyncio is installed, use natural async/await syntax:
+
+```python
+# Set in your pyproject.toml for automatic async test detection
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+# Then use await syntax
+@pytest.mark.asyncio
+async def test_my_benchmark(async_benchmark):
+    result = await async_benchmark(my_async_function)
+    # Your assertions here
+```
+
+**Benefits of pytest-asyncio integration:**
+- ✅ Native `async`/`await` syntax support
+- ✅ Automatic event loop management
+- ✅ No `RuntimeError: cannot be called from a running event loop`
+- ✅ Better compatibility with async frameworks like FastAPI, Quart, aiohttp
+- ✅ Cleaner test code with standard async patterns
+
+### Without pytest-asyncio (Simple Setup)
+When pytest-asyncio is not available, the simple interface works automatically:
+
+```python
+# No pytest-asyncio required
+def test_my_benchmark(async_benchmark):
+    result = async_benchmark(my_async_function)  # No await needed
+    # Your assertions here
+```
+
+**Benefits of simple interface:**
+- ✅ No additional dependencies required
+- ✅ Simpler setup for basic use cases
+- ✅ Perfect for getting started quickly
+- ✅ Automatic event loop management internally
+
 ## 🎯 Core Usage Examples
+
+### Interface Flexibility
+
+#### Async Interface (with pytest-asyncio)
+```python
+@pytest.mark.asyncio
+@pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
+async def test_with_marker(async_benchmark):
+    """Use marker for consistent, visible configuration."""
+    result = await async_benchmark(my_async_function)
+    assert result['rounds'] == 10  # Configuration is explicit and visible
+```
+
+#### Simple Interface (without pytest-asyncio)
+```python
+@pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
+def test_with_marker_sync(async_benchmark):
+    """Use marker for consistent, visible configuration - simple style."""
+    result = async_benchmark(my_async_function)  # No await needed
+    assert result['rounds'] == 10  # Configuration is explicit and visible
+```
+
+### Two Configuration Syntaxes
+
+#### Marker Syntax (Declarative)
+```python
+# With pytest-asyncio
+@pytest.mark.asyncio
+@pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
+async def test_with_marker_async(async_benchmark):
+    result = await async_benchmark(my_async_function)
+    assert result['rounds'] == 10
+
+# Without pytest-asyncio
+@pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
+def test_with_marker_sync(async_benchmark):
+    result = async_benchmark(my_async_function)
+    assert result['rounds'] == 10
+```
+
+#### Function Parameter Syntax (Dynamic)
+```python
+# With pytest-asyncio
+@pytest.mark.asyncio
+async def test_with_parameters_async(async_benchmark):
+    result = await async_benchmark(
+        my_async_function,
+        rounds=10,
+        iterations=100,
+        warmup_rounds=2
+    )
+    assert result['rounds'] == 10
+
+# Without pytest-asyncio
+def test_with_parameters_simple(async_benchmark):
+    result = async_benchmark(
+        my_async_function,
+        rounds=10,
+        iterations=100,
+        warmup_rounds=2
+    )
+    assert result['rounds'] == 10
+```
+
+#### Combined Syntax (Override)
+Both interfaces support parameter precedence where function parameters override marker settings:
+
+```python
+@pytest.mark.async_benchmark(rounds=5, iterations=50)  # Default config
+async def test_with_override(async_benchmark):  # Works with or without @pytest.mark.asyncio
+    """Function parameters override marker settings."""
+    result = await async_benchmark(  # Use 'await' only with pytest-asyncio
+        my_async_function,
+        rounds=20  # This overrides marker's rounds=5
+        # iterations=50 comes from marker
+    )
+    assert result['rounds'] == 20      # Function parameter wins
+    assert result['iterations'] == 50  # From marker
+```
 
 ### Basic Benchmarking
 
 ```python
-def test_my_async_function(async_benchmark):
+@pytest.mark.asyncio
+async def test_my_async_function(async_benchmark):
     async def my_function():
         # Your async code here
         await some_async_operation()
         return result
     
     # Benchmark with default settings (5 rounds, 1 iteration each)
-    stats = async_benchmark(my_function)
+    stats = await async_benchmark(my_function)
     
     # Access comprehensive timing statistics
     print(f"Mean execution time: {stats['mean']:.3f}s")
@@ -63,9 +268,86 @@ def test_my_async_function(async_benchmark):
 
 ### Advanced Configuration
 
+## 🎯 Two Configuration Syntaxes
+
+pytest-async-benchmark offers **two flexible ways** to configure your benchmarks:
+
+### 🏷️ Marker Syntax (Recommended)
+
+Use pytest markers for **declarative, visible configuration**:
+
 ```python
-def test_with_custom_settings(async_benchmark):
-    result = async_benchmark(
+@pytest.mark.asyncio
+@pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
+async def test_high_precision_benchmark(async_benchmark):
+    """High precision benchmark with marker configuration."""
+    result = await async_benchmark(my_async_function)
+    
+    # Configuration is visible and consistent
+    assert result['rounds'] == 10
+    assert result['iterations'] == 100
+```
+
+**Benefits:**
+- ✅ **Visible configuration** - Parameters are clear at test level
+- ✅ **IDE support** - Better tooling and autocomplete
+- ✅ **Test discovery** - Easy to find all benchmark tests
+- ✅ **Consistent configs** - Same settings across related tests
+
+### ⚙️ Function Parameter Syntax
+
+Use function parameters for **dynamic, flexible configuration**:
+
+```python
+@pytest.mark.asyncio
+async def test_dynamic_benchmark(async_benchmark):
+    """Dynamic benchmark with runtime configuration."""
+    # Configuration can be computed or conditional
+    rounds = 20 if is_production else 5
+    
+    result = await async_benchmark(
+        my_async_function,
+        rounds=rounds,
+        iterations=50,
+        warmup_rounds=1
+    )
+```
+
+**Benefits:**
+- ✅ **Dynamic configuration** - Runtime parameter calculation
+- ✅ **Conditional logic** - Different configs based on environment
+- ✅ **Per-call customization** - Each benchmark call can differ
+
+### 🔄 Combined Syntax (Best of Both)
+
+**Function parameters override marker parameters**:
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.async_benchmark(rounds=5, iterations=50, warmup_rounds=1)
+async def test_with_overrides(async_benchmark):
+    """Use marker defaults with selective overrides."""
+    
+    # Quick test with marker defaults
+    quick_result = await async_benchmark(fast_function)
+    
+    # Precision test with overridden rounds
+    precise_result = await async_benchmark(
+        slow_function,
+        rounds=20  # Overrides marker's rounds=5
+        # iterations=50 and warmup_rounds=1 come from marker
+    )
+    
+    assert quick_result['rounds'] == 5   # From marker
+    assert precise_result['rounds'] == 20  # From function override
+```
+
+### Traditional Configuration
+
+```python
+@pytest.mark.asyncio
+async def test_with_custom_settings(async_benchmark):
+    result = await async_benchmark(
         my_async_function,
         rounds=10,        # Number of rounds to run
         iterations=5,     # Iterations per round
@@ -76,13 +358,14 @@ def test_with_custom_settings(async_benchmark):
 ### With Function Arguments
 
 ```python
-def test_with_args(async_benchmark):
+@pytest.mark.asyncio
+async def test_with_args(async_benchmark):
     async def process_data(data, multiplier=1):
         # Process the data
         await asyncio.sleep(0.01)
         return len(data) * multiplier
     
-    result = async_benchmark(
+    result = await async_benchmark(
         process_data,
         "test_data",      # positional arg
         multiplier=2,     # keyword arg
@@ -285,13 +568,14 @@ async def get_data():
     await asyncio.sleep(0.005)
     return {"data": "example"}
 
-def test_fastapi_endpoint_performance(async_benchmark):
+@pytest.mark.asyncio
+async def test_fastapi_endpoint_performance(async_benchmark):
     async def make_request():
         with TestClient(app) as client:
             response = client.get("/api/data")
             return response.json()
     
-    result = async_benchmark(make_request, rounds=10)
+    result = await async_benchmark(make_request, rounds=10)
     assert result['mean'] < 0.1  # Should respond within 100ms
     assert result['grade'] in ['A', 'B']  # Should have good performance grade
 ```
@@ -326,6 +610,7 @@ a_vs_b_comparison(
 ### Database Query Benchmarking
 
 ```python
+@pytest.mark.asyncio
 async def test_database_query_performance(async_benchmark):
     async def fetch_user_data(user_id):
         async with database.connection() as conn:
@@ -333,7 +618,7 @@ async def test_database_query_performance(async_benchmark):
                 "SELECT * FROM users WHERE id = ?", user_id
             )
     
-    result = async_benchmark(fetch_user_data, 123, rounds=5)
+    result = await async_benchmark(fetch_user_data, 123, rounds=5)
     assert result['mean'] < 0.05  # Should complete within 50ms
     assert result['p95'] < 0.1    # 95% of queries under 100ms
 ```
@@ -342,9 +627,10 @@ async def test_database_query_performance(async_benchmark):
 
 ```python
 @pytest.mark.async_benchmark
-def test_performance(async_benchmark):
+@pytest.mark.asyncio
+async def test_performance(async_benchmark):
     # Your benchmark test
-    result = async_benchmark(my_async_function)
+    result = await async_benchmark(my_async_function)
     assert result is not None
 ```
 
@@ -373,6 +659,7 @@ A dictionary with comprehensive statistics including min, max, mean, median, std
 
 - Python ≥ 3.9
 - pytest ≥ 8.3.5
+- pytest-asyncio ≥ 0.23.0 (automatically installed)
 
 Note: Rich (for beautiful terminal output) is automatically installed as a dependency.
 
