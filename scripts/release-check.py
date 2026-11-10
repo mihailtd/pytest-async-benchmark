@@ -252,7 +252,7 @@ def check_tests() -> list[str]:
 
     print_info("Testing example files...")
     success, stdout, stderr = run_command(
-        "uv run python -m pytest examples/pytest_examples.py -v"
+        "uv run python -m pytest examples/pytest_examples.py examples/pedantic_examples.py -v"
     )
     if success:
         example_count = stdout.count(" PASSED")

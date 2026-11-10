@@ -5,6 +5,20 @@ All notable changes to pytest-async-benchmark will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-10
+
+### 🚀 Major Features
+- **Pedantic Mode**: Added `async_benchmark.pedantic()` (and `AsyncBenchmarkRunner.run_pedantic()`) allowing per-iteration setup and teardown while excluding their duration from benchmark measurements (addresses issue #1)
+- **Flexible Hook Support**: Setup and teardown functions can be synchronous or asynchronous coroutines
+- **Argument Passing**: Return values from `setup` (individual values or unpacked tuples) are passed as arguments to both the target function and `teardown`
+- **Dual Interface Pedantic Support**: Works seamlessly with `await async_benchmark.pedantic(...)` or synchronous `async_benchmark.pedantic(...)`
+
+### 🔧 Improvements & Upgrades
+- **Dependency Upgrades**: Upgraded dependencies to latest versions (pytest 9.x, rich 15.x, ruff 0.17.x, aiohttp 3.14.x, quart 0.23.x, pre-commit 4.7.x)
+- **Modern Python Compatibility**: Fixed `asyncio.iscoroutinefunction` deprecations slated for removal in Python 3.16 by switching to `inspect.iscoroutinefunction` across all modules
+- **Pytest-Asyncio v1.x Compatibility**: Added explicit `asyncio_mode = "auto"` and `asyncio_default_fixture_loop_scope = "function"` configuration in `pyproject.toml`
+- **CI Matrix**: Extended GitHub Actions CI matrix to test on Python 3.13
+
 ## [0.2.0] - 2025-05-28
 
 ### 🚀 Major Features

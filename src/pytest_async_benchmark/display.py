@@ -134,9 +134,9 @@ def display_comparison_table(
 
 def validate_async_function(func) -> bool:
     """Validate that a function is async."""
-    import asyncio
+    import inspect
 
-    return asyncio.iscoroutinefunction(func)
+    return inspect.iscoroutinefunction(func)
 
 
 def display_results_rich(benchmark_results, terminalreporter):

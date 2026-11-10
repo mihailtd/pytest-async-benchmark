@@ -1,6 +1,7 @@
 """Utility functions for async benchmarking."""
 
 import asyncio
+import inspect
 
 
 def format_time(seconds: float) -> str:
@@ -17,7 +18,7 @@ def format_time(seconds: float) -> str:
 
 def validate_async_function(func) -> bool:
     """Validate that a function is async."""
-    return asyncio.iscoroutinefunction(func)
+    return inspect.iscoroutinefunction(func)
 
 
 def get_event_loop():

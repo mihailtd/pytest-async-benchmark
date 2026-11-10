@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
 
@@ -39,7 +39,7 @@ jobs:
 
       - name: Test examples
         run: |
-          uv run python -m pytest examples/pytest_examples.py -v
+          uv run python -m pytest examples/pytest_examples.py examples/pedantic_examples.py -v
           uv run python examples/comparison_examples.py
 
       - name: Test package build

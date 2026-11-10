@@ -53,11 +53,12 @@ async def test_my_api():
     # Your existing async test code
     pass
 
+
 # Then just add pytest-async-benchmark and use:
 @pytest.mark.asyncio
 async def test_my_api_performance(async_benchmark):
     result = await async_benchmark(my_async_function)
-    assert result['mean'] < 0.01
+    assert result["mean"] < 0.01
 ```
 
 ## 🚀 Quick Start
@@ -71,18 +72,20 @@ When pytest-asyncio is installed, use the natural async/await syntax:
 import asyncio
 import pytest
 
+
 async def slow_async_operation():
     await asyncio.sleep(0.01)  # 10ms
     return "result"
+
 
 @pytest.mark.asyncio
 @pytest.mark.async_benchmark(rounds=5, iterations=10)
 async def test_async_performance(async_benchmark):
     # Use await with pytest-asyncio for best experience
     result = await async_benchmark(slow_async_operation)
-    
+
     # Your assertions here
-    assert result['mean'] < 0.02
+    assert result["mean"] < 0.02
 ```
 
 ### Simple Interface (without pytest-asyncio)
@@ -92,17 +95,19 @@ For simpler setups, the sync interface works automatically:
 import asyncio
 import pytest
 
+
 async def slow_async_operation():
     await asyncio.sleep(0.01)
     return "result"
+
 
 @pytest.mark.async_benchmark(rounds=5, iterations=10)
 def test_sync_performance(async_benchmark):
     # No await needed - sync interface
     result = async_benchmark(slow_async_operation)
-    
+
     # Your assertions here
-    assert result['mean'] < 0.02  # Should complete in under 20ms
+    assert result["mean"] < 0.02  # Should complete in under 20ms
 ```
 
 ### Flexible Configuration Syntax
@@ -114,14 +119,14 @@ pytest-async-benchmark supports **two syntax options** for configuring benchmark
 @pytest.mark.async_benchmark(rounds=5, iterations=10)
 async def test_with_marker(async_benchmark):
     result = await async_benchmark(slow_async_operation)
-    assert result['rounds'] == 5  # From marker
+    assert result["rounds"] == 5  # From marker
 ```
 
 #### Option 2: Function Parameter Syntax
 ```python
 async def test_with_parameters(async_benchmark):
     result = await async_benchmark(slow_async_operation, rounds=5, iterations=10)
-    assert result['rounds'] == 5  # From function parameters
+    assert result["rounds"] == 5  # From function parameters
 ```
 
 ## 🔧 Interface Detection & Flexibility
@@ -135,6 +140,7 @@ When pytest-asyncio is installed, use natural async/await syntax:
 # Set in your pyproject.toml for automatic async test detection
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
 
 # Then use await syntax
 @pytest.mark.asyncio
@@ -177,7 +183,7 @@ def test_my_benchmark(async_benchmark):
 async def test_with_marker(async_benchmark):
     """Use marker for consistent, visible configuration."""
     result = await async_benchmark(my_async_function)
-    assert result['rounds'] == 10  # Configuration is explicit and visible
+    assert result["rounds"] == 10  # Configuration is explicit and visible
 ```
 
 #### Simple Interface (without pytest-asyncio)
@@ -186,7 +192,7 @@ async def test_with_marker(async_benchmark):
 def test_with_marker_sync(async_benchmark):
     """Use marker for consistent, visible configuration - simple style."""
     result = async_benchmark(my_async_function)  # No await needed
-    assert result['rounds'] == 10  # Configuration is explicit and visible
+    assert result["rounds"] == 10  # Configuration is explicit and visible
 ```
 
 ### Two Configuration Syntaxes
@@ -198,13 +204,14 @@ def test_with_marker_sync(async_benchmark):
 @pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
 async def test_with_marker_async(async_benchmark):
     result = await async_benchmark(my_async_function)
-    assert result['rounds'] == 10
+    assert result["rounds"] == 10
+
 
 # Without pytest-asyncio
 @pytest.mark.async_benchmark(rounds=10, iterations=100, warmup_rounds=2)
 def test_with_marker_sync(async_benchmark):
     result = async_benchmark(my_async_function)
-    assert result['rounds'] == 10
+    assert result["rounds"] == 10
 ```
 
 #### Function Parameter Syntax (Dynamic)
@@ -213,22 +220,17 @@ def test_with_marker_sync(async_benchmark):
 @pytest.mark.asyncio
 async def test_with_parameters_async(async_benchmark):
     result = await async_benchmark(
-        my_async_function,
-        rounds=10,
-        iterations=100,
-        warmup_rounds=2
+        my_async_function, rounds=10, iterations=100, warmup_rounds=2
     )
-    assert result['rounds'] == 10
+    assert result["rounds"] == 10
+
 
 # Without pytest-asyncio
 def test_with_parameters_simple(async_benchmark):
     result = async_benchmark(
-        my_async_function,
-        rounds=10,
-        iterations=100,
-        warmup_rounds=2
+        my_async_function, rounds=10, iterations=100, warmup_rounds=2
     )
-    assert result['rounds'] == 10
+    assert result["rounds"] == 10
 ```
 
 #### Combined Syntax (Override)
@@ -236,15 +238,17 @@ Both interfaces support parameter precedence where function parameters override 
 
 ```python
 @pytest.mark.async_benchmark(rounds=5, iterations=50)  # Default config
-async def test_with_override(async_benchmark):  # Works with or without @pytest.mark.asyncio
+async def test_with_override(
+    async_benchmark,
+):  # Works with or without @pytest.mark.asyncio
     """Function parameters override marker settings."""
     result = await async_benchmark(  # Use 'await' only with pytest-asyncio
         my_async_function,
-        rounds=20  # This overrides marker's rounds=5
+        rounds=20,  # This overrides marker's rounds=5
         # iterations=50 comes from marker
     )
-    assert result['rounds'] == 20      # Function parameter wins
-    assert result['iterations'] == 50  # From marker
+    assert result["rounds"] == 20  # Function parameter wins
+    assert result["iterations"] == 50  # From marker
 ```
 
 ### Basic Benchmarking
@@ -268,6 +272,42 @@ async def test_my_async_function(async_benchmark):
 
 ### Advanced Configuration
 
+### 🔬 Pedantic Mode (Setup & Teardown Excluded from Timing)
+
+When benchmarking async operations that require per-iteration setup (e.g. creating fresh databases, initializing connection pools, or preparing test fixtures) and teardown, setup/cleanup overhead pollutes the timing results.
+
+`async_benchmark.pedantic()` runs setup before and teardown after each iteration, but strictly measures **only the target operation**:
+
+```python
+@pytest.mark.asyncio
+async def test_database_indexing(async_benchmark):
+    async def setup():
+        db = await create_fresh_database()
+        return db
+
+    async def teardown(db):
+        await db.close()
+
+    async def index_records(db):
+        await db.execute("CREATE INDEX idx_user ON users(email)")
+
+    result = await async_benchmark.pedantic(
+        index_records,
+        setup=setup,
+        teardown=teardown,
+        rounds=10,
+        iterations=1,
+    )
+    assert result["mean"] < 0.05
+```
+
+**Key Features:**
+- ⚡ **Zero Setup/Teardown Overhead**: Setup and teardown times are excluded from benchmark measurements.
+- 🔄 **Sync or Async Hooks**: Both `setup` and `teardown` can be synchronous functions or `async def` coroutines.
+- 📦 **Argument Passing**: Return value from `setup` is passed as argument(s) to the target function and `teardown`. Unpacks tuples automatically if returned.
+- 🛡️ **Safe Cleanup**: Teardown runs in a `finally` block even if the target encounters an error.
+- 🌓 **Dual Interface**: Supports `await async_benchmark.pedantic(...)` or synchronous `async_benchmark.pedantic(...)`.
+
 ## 🎯 Two Configuration Syntaxes
 
 pytest-async-benchmark offers **two flexible ways** to configure your benchmarks:
@@ -282,10 +322,10 @@ Use pytest markers for **declarative, visible configuration**:
 async def test_high_precision_benchmark(async_benchmark):
     """High precision benchmark with marker configuration."""
     result = await async_benchmark(my_async_function)
-    
+
     # Configuration is visible and consistent
-    assert result['rounds'] == 10
-    assert result['iterations'] == 100
+    assert result["rounds"] == 10
+    assert result["iterations"] == 100
 ```
 
 **Benefits:**
@@ -304,12 +344,9 @@ async def test_dynamic_benchmark(async_benchmark):
     """Dynamic benchmark with runtime configuration."""
     # Configuration can be computed or conditional
     rounds = 20 if is_production else 5
-    
+
     result = await async_benchmark(
-        my_async_function,
-        rounds=rounds,
-        iterations=50,
-        warmup_rounds=1
+        my_async_function, rounds=rounds, iterations=50, warmup_rounds=1
     )
 ```
 
@@ -327,19 +364,19 @@ async def test_dynamic_benchmark(async_benchmark):
 @pytest.mark.async_benchmark(rounds=5, iterations=50, warmup_rounds=1)
 async def test_with_overrides(async_benchmark):
     """Use marker defaults with selective overrides."""
-    
+
     # Quick test with marker defaults
     quick_result = await async_benchmark(fast_function)
-    
+
     # Precision test with overridden rounds
     precise_result = await async_benchmark(
         slow_function,
-        rounds=20  # Overrides marker's rounds=5
+        rounds=20,  # Overrides marker's rounds=5
         # iterations=50 and warmup_rounds=1 come from marker
     )
-    
-    assert quick_result['rounds'] == 5   # From marker
-    assert precise_result['rounds'] == 20  # From function override
+
+    assert quick_result["rounds"] == 5  # From marker
+    assert precise_result["rounds"] == 20  # From function override
 ```
 
 ### Traditional Configuration
@@ -349,9 +386,9 @@ async def test_with_overrides(async_benchmark):
 async def test_with_custom_settings(async_benchmark):
     result = await async_benchmark(
         my_async_function,
-        rounds=10,        # Number of rounds to run
-        iterations=5,     # Iterations per round
-        warmup_rounds=2   # Warmup rounds before measurement
+        rounds=10,  # Number of rounds to run
+        iterations=5,  # Iterations per round
+        warmup_rounds=2,  # Warmup rounds before measurement
     )
 ```
 
@@ -364,12 +401,12 @@ async def test_with_args(async_benchmark):
         # Process the data
         await asyncio.sleep(0.01)
         return len(data) * multiplier
-    
+
     result = await async_benchmark(
         process_data,
-        "test_data",      # positional arg
-        multiplier=2,     # keyword arg
-        rounds=3
+        "test_data",  # positional arg
+        multiplier=2,  # keyword arg
+        rounds=3,
     )
 ```
 
@@ -380,13 +417,16 @@ async def test_with_args(async_benchmark):
 ```python
 from pytest_async_benchmark import quick_compare
 
+
 async def algorithm_v1():
     await asyncio.sleep(0.002)  # 2ms
     return "v1_result"
 
+
 async def algorithm_v2():
     await asyncio.sleep(0.0015)  # 1.5ms - optimized
     return "v2_result"
+
 
 # Quick one-liner comparison
 def test_algorithm_comparison():
@@ -399,12 +439,16 @@ def test_algorithm_comparison():
 ```python
 from pytest_async_benchmark import a_vs_b_comparison
 
+
 def test_detailed_comparison():
     # Compare with beautiful terminal output
     a_vs_b_comparison(
-        "Original Algorithm", algorithm_v1,
-        "Optimized Algorithm", algorithm_v2,
-        rounds=8, iterations=20
+        "Original Algorithm",
+        algorithm_v1,
+        "Optimized Algorithm",
+        algorithm_v2,
+        rounds=8,
+        iterations=20,
     )
 ```
 
@@ -413,25 +457,30 @@ def test_detailed_comparison():
 ```python
 from pytest_async_benchmark import BenchmarkComparator
 
+
 def test_multi_scenario():
     comparator = BenchmarkComparator()
-    
+
     # Add multiple scenarios
     comparator.add_scenario(
-        "Database Query v1", db_query_v1,
-        rounds=5, iterations=10,
-        description="Original database implementation"
+        "Database Query v1",
+        db_query_v1,
+        rounds=5,
+        iterations=10,
+        description="Original database implementation",
     )
-    
+
     comparator.add_scenario(
-        "Database Query v2", db_query_v2,
-        rounds=5, iterations=10,
-        description="Optimized with connection pooling"
+        "Database Query v2",
+        db_query_v2,
+        rounds=5,
+        iterations=10,
+        description="Optimized with connection pooling",
     )
-    
+
     # Run comparison and get results
     results = comparator.run_comparison()
-    
+
     # Beautiful comparison table automatically displayed
     # Access programmatic results
     fastest = results.get_fastest_scenario()
@@ -444,20 +493,20 @@ Each benchmark returns detailed statistics:
 
 ```python
 {
-    'min': 0.001234,      # Minimum execution time
-    'max': 0.005678,      # Maximum execution time  
-    'mean': 0.002456,     # Mean execution time
-    'median': 0.002123,   # Median execution time
-    'stddev': 0.000234,   # Standard deviation
-    'p50': 0.002123,      # 50th percentile (median)
-    'p90': 0.003456,      # 90th percentile
-    'p95': 0.004123,      # 95th percentile
-    'p99': 0.004789,      # 99th percentile
-    'rounds': 5,          # Number of rounds executed
-    'iterations': 1,      # Number of iterations per round
-    'raw_times': [...],   # List of raw timing measurements
-    'grade': 'A',         # Performance grade (A-F)
-    'grade_score': 87.5   # Numeric grade score (0-100)
+    "min": 0.001234,  # Minimum execution time
+    "max": 0.005678,  # Maximum execution time
+    "mean": 0.002456,  # Mean execution time
+    "median": 0.002123,  # Median execution time
+    "stddev": 0.000234,  # Standard deviation
+    "p50": 0.002123,  # 50th percentile (median)
+    "p90": 0.003456,  # 90th percentile
+    "p95": 0.004123,  # 95th percentile
+    "p99": 0.004789,  # 99th percentile
+    "rounds": 5,  # Number of rounds executed
+    "iterations": 1,  # Number of iterations per round
+    "raw_times": [...],  # List of raw timing measurements
+    "grade": "A",  # Performance grade (A-F)
+    "grade_score": 87.5,  # Numeric grade score (0-100)
 }
 ```
 
@@ -562,11 +611,13 @@ import pytest
 
 app = FastAPI()
 
+
 @app.get("/api/data")
 async def get_data():
     # Simulate database query
     await asyncio.sleep(0.005)
     return {"data": "example"}
+
 
 @pytest.mark.asyncio
 async def test_fastapi_endpoint_performance(async_benchmark):
@@ -574,10 +625,10 @@ async def test_fastapi_endpoint_performance(async_benchmark):
         with TestClient(app) as client:
             response = client.get("/api/data")
             return response.json()
-    
+
     result = await async_benchmark(make_request, rounds=10)
-    assert result['mean'] < 0.1  # Should respond within 100ms
-    assert result['grade'] in ['A', 'B']  # Should have good performance grade
+    assert result["mean"] < 0.1  # Should respond within 100ms
+    assert result["grade"] in ["A", "B"]  # Should have good performance grade
 ```
 
 ### Quart API Endpoint Comparison
@@ -589,21 +640,22 @@ from pytest_async_benchmark import a_vs_b_comparison
 import asyncio
 import aiohttp
 
+
 async def test_api_v1():
     async with aiohttp.ClientSession() as session:
-        async with session.get('http://localhost:5000/api/v1/data') as resp:
+        async with session.get("http://localhost:5000/api/v1/data") as resp:
             return await resp.json()
+
 
 async def test_api_v2():
     async with aiohttp.ClientSession() as session:
-        async with session.get('http://localhost:5000/api/v2/data') as resp:
+        async with session.get("http://localhost:5000/api/v2/data") as resp:
             return await resp.json()
+
 
 # Compare API versions
 a_vs_b_comparison(
-    "API v1", test_api_v1,
-    "API v2 (Optimized)", test_api_v2,
-    rounds=10, iterations=5
+    "API v1", test_api_v1, "API v2 (Optimized)", test_api_v2, rounds=10, iterations=5
 )
 ```
 
@@ -614,13 +666,11 @@ a_vs_b_comparison(
 async def test_database_query_performance(async_benchmark):
     async def fetch_user_data(user_id):
         async with database.connection() as conn:
-            return await conn.fetch_one(
-                "SELECT * FROM users WHERE id = ?", user_id
-            )
-    
+            return await conn.fetch_one("SELECT * FROM users WHERE id = ?", user_id)
+
     result = await async_benchmark(fetch_user_data, 123, rounds=5)
-    assert result['mean'] < 0.05  # Should complete within 50ms
-    assert result['p95'] < 0.1    # 95% of queries under 100ms
+    assert result["mean"] < 0.05  # Should complete within 50ms
+    assert result["p95"] < 0.1  # 95% of queries under 100ms
 ```
 
 ## 🎯 Using Markers

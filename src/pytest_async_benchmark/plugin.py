@@ -1,6 +1,7 @@
 """Core pytest plugin for async benchmarking."""
 
 import asyncio
+import inspect
 from collections.abc import Awaitable
 from typing import Any, Callable, Optional
 
@@ -119,7 +120,7 @@ class AsyncBenchmarkFixture:
             If pytest-asyncio is available and active: An awaitable that yields benchmark results
             If pytest-asyncio is not available: Benchmark results directly (sync interface)
         """
-        if not asyncio.iscoroutinefunction(func):
+        if not inspect.iscoroutinefunction(func):
             raise ValueError("Function must be async (coroutine function)")
 
         marker_params = self._get_marker_params()
@@ -141,6 +142,83 @@ class AsyncBenchmarkFixture:
         # Create the benchmark coroutine
         async def _benchmark():
             result = await runner.run(func, *args, **kwargs)
+            test_name = self.request.node.name
+            self.results[test_name] = result
+            self._display_results(test_name, result)
+            return result
+
+        if _is_pytest_asyncio_available():
+            return _benchmark()
+        else:
+            return _SyncResultWrapper(_benchmark())
+
+    def pedantic(
+        self,
+        func: Callable,
+        *target_args,
+        setup: Optional[Callable] = None,
+        teardown: Optional[Callable] = None,
+        rounds: Optional[int] = None,
+        iterations: Optional[int] = None,
+        warmup_rounds: Optional[int] = None,
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict[str, Any]] = None,
+        **extra_kwargs,
+    ) -> Any:
+        """Benchmark an async function in pedantic mode with setup and teardown.
+
+        Setup and teardown are executed before and after each iteration, but their
+        duration is excluded from benchmark timing measurements.
+
+        Args:
+            func: The async coroutine function to benchmark.
+            *target_args: Positional arguments to pass to func.
+            setup: Sync or async callable executed before each iteration. Its return value
+                   is passed as extra positional argument(s) to func and teardown.
+            teardown: Sync or async callable executed after each iteration, receiving setup's return value.
+            rounds: Number of benchmark rounds (defaults to marker setting or 5).
+            iterations: Number of iterations per round (defaults to marker setting or 1).
+            warmup_rounds: Number of warmup rounds (defaults to marker setting or 0).
+            args: Optional tuple of positional arguments (alternative to *target_args).
+            kwargs: Optional dict of keyword arguments.
+            **extra_kwargs: Additional keyword arguments to pass to func.
+
+        Returns:
+            If pytest-asyncio is available and active: An awaitable that yields benchmark results.
+            If pytest-asyncio is not available: Benchmark results directly (sync interface).
+        """
+        if not inspect.iscoroutinefunction(func):
+            raise ValueError("Function must be async (coroutine function)")
+
+        marker_params = self._get_marker_params()
+
+        final_rounds = rounds if rounds is not None else marker_params.get("rounds")
+        final_iterations = (
+            iterations if iterations is not None else marker_params.get("iterations")
+        )
+        final_warmup = (
+            warmup_rounds
+            if warmup_rounds is not None
+            else marker_params.get("warmup_rounds", 0)
+        )
+
+        runner = AsyncBenchmarkRunner(
+            rounds=final_rounds, iterations=final_iterations, warmup_rounds=final_warmup
+        )
+
+        call_args = list(args) if args is not None else list(target_args)
+        call_kwargs = dict(kwargs) if kwargs is not None else {}
+        call_kwargs.update(extra_kwargs)
+
+        # Create the benchmark coroutine
+        async def _benchmark():
+            result = await runner.run_pedantic(
+                func,
+                *call_args,
+                setup=setup,
+                teardown=teardown,
+                **call_kwargs,
+            )
             test_name = self.request.node.name
             self.results[test_name] = result
             self._display_results(test_name, result)

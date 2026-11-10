@@ -1,6 +1,6 @@
 """pytest-async-benchmark: Modern pytest benchmarking for async code. 🚀"""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Mihai Farcas"
 __email__ = "contact@mihai.ltd"
 
