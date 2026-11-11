@@ -195,6 +195,7 @@ async def manual_comparison_example():
     comparator.display_performance_grades()
 
     fastest = comparator.get_fastest_scenario()
+    assert fastest is not None
     console.print(f"\n🏆 Fastest: [green]{fastest['name']}[/green]")
 
 

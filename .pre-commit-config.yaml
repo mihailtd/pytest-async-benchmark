@@ -1,11 +1,4 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.15
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
@@ -16,8 +9,29 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
 
+  # Lint/format/type hooks run through uv so they use the exact tool versions
+  # pinned in uv.lock -- the same ones CI uses.
   - repo: local
     hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: ty
+        name: ty check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: pytest
         name: pytest
         entry: uv run pytest
@@ -25,4 +39,4 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
-        args: [tests/, -v, --tb=short]
+        args: [tests/, -q, --tb=short]

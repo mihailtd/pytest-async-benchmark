@@ -75,6 +75,7 @@ class TestBenchmarkComparator:
         ]
 
         fastest = comparator.get_fastest_scenario()
+        assert fastest is not None
         assert fastest["name"] == "Fast"
 
     def test_most_stable_scenario(self):
@@ -88,6 +89,7 @@ class TestBenchmarkComparator:
         ]
 
         stable = comparator.get_most_stable_scenario()
+        assert stable is not None
         assert stable["name"] == "Stable"
 
     def test_export_results(self):
@@ -226,11 +228,12 @@ class TestDisplayComparison:
             },
         ]
 
-        console = Console(file=StringIO(), width=120)
+        buffer = StringIO()
+        console = Console(file=buffer, width=120)
 
         display_comparison_table(comparisons, title="Test Comparison", console=console)
 
-        output = console.file.getvalue()
+        output = buffer.getvalue()
         assert "Test Comparison" in output
         assert "Version 1" in output
         assert "Version 2" in output

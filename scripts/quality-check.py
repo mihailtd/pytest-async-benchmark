@@ -30,6 +30,7 @@ def main():
     checks = [
         ("uv run ruff check . --fix", "Linting (with auto-fix)"),
         ("uv run ruff format .", "Code formatting"),
+        ("uv run ty check", "Type checking"),
         ("uv run pytest tests/ -v --tb=short", "Test suite"),
         ("python scripts/release-check.py", "Release readiness"),
     ]

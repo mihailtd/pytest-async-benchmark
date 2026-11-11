@@ -11,7 +11,7 @@ For most releases, follow these simple steps:
    # Make sure you're on main and up to date
    git checkout main
    git pull origin main
-   
+
    # Update version in pyproject.toml and __init__.py
    # Follow semantic versioning: MAJOR.MINOR.PATCH
    ```

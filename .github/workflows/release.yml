@@ -106,12 +106,13 @@ jobs:
 
           if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_type }}" == "tag" ]; then
             echo "ℹ️  Tag-triggered release detected, running basic checks only..."
-            
+
             # Run basic checks without tag validation
             uv run pytest tests/ -v --tb=short
             uv run ruff check .
             uv run ruff format --check .
-            
+            uv run ty check
+
             echo "✅ Basic checks passed for tag-triggered release"
           else
             # Full release check for manual triggers

@@ -16,6 +16,7 @@ Modern pytest benchmarking for async code with beautiful terminal output and adv
 - 🏆 **Winner Detection**: Automatic identification of best-performing implementation
 - 🚀 **Easy to Use**: Simple fixture-based API with native `async`/`await` support
 - 🔧 **pytest-asyncio Compatible**: Works perfectly with pytest-asyncio's event loop management
+- 🌐 **Framework Friendly**: Works with any async code, including **FastAPI**, **FastMCP**, Quart, aiohttp and more (see [Real-World Examples](#-real-world-examples))
 
 ## 📦 Installation
 
@@ -260,10 +261,10 @@ async def test_my_async_function(async_benchmark):
         # Your async code here
         await some_async_operation()
         return result
-    
+
     # Benchmark with default settings (5 rounds, 1 iteration each)
     stats = await async_benchmark(my_function)
-    
+
     # Access comprehensive timing statistics
     print(f"Mean execution time: {stats['mean']:.3f}s")
     print(f"Standard deviation: {stats['stddev']:.3f}s")
@@ -566,6 +567,8 @@ pytest-async-benchmark/
 │       └── comparison.py        # A vs B comparison functionality
 ├── examples/
 │   ├── pytest_examples.py      # Comprehensive pytest usage examples
+│   ├── fastapi_examples.py      # FastAPI endpoint benchmarking
+│   ├── fastmcp_examples.py      # FastMCP tool/resource benchmarking
 │   ├── quart_api_comparison.py  # Real-world API endpoint comparison
 │   └── comparison_examples.py   # Advanced comparison features demo
 ├── tests/
@@ -586,6 +589,18 @@ Comprehensive pytest usage examples including:
 - Performance assertions and testing patterns
 - Using markers for benchmark organization
 
+### ⚡ [`examples/fastapi_examples.py`](examples/fastapi_examples.py)
+FastAPI endpoint benchmarking (Python 3.10+):
+- In-process calls via `httpx.ASGITransport` (no server, no network)
+- Latency budgets with both fixture and marker syntax
+- A vs B comparison of two endpoint implementations
+
+### 🤖 [`examples/fastmcp_examples.py`](examples/fastmcp_examples.py)
+FastMCP server benchmarking (Python 3.10+):
+- MCP tool and resource round-trip latency
+- In-memory client transport (no subprocess, no stdio)
+- A vs B comparison of two tool implementations
+
 ### 🌐 [`examples/quart_api_comparison.py`](examples/quart_api_comparison.py)
 Real-world API endpoint comparison demo featuring:
 - Quart web framework setup
@@ -604,31 +619,74 @@ Advanced comparison features showcase:
 
 ### FastAPI Endpoint Benchmarking
 
+Call your app in-process through `httpx.ASGITransport`. There is no server to start and no network involved. See [`examples/fastapi_examples.py`](examples/fastapi_examples.py) for the complete example.
+
 ```python
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+import asyncio
+
+import httpx
 import pytest
+from fastapi import FastAPI
 
 app = FastAPI()
 
 
 @app.get("/api/data")
 async def get_data():
-    # Simulate database query
-    await asyncio.sleep(0.005)
+    await asyncio.sleep(0.005)  # simulate a database query
     return {"data": "example"}
 
 
+@pytest.fixture
+async def client():
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
 @pytest.mark.asyncio
-async def test_fastapi_endpoint_performance(async_benchmark):
+async def test_fastapi_endpoint_performance(async_benchmark, client):
     async def make_request():
-        with TestClient(app) as client:
-            response = client.get("/api/data")
-            return response.json()
+        response = await client.get("/api/data")
+        assert response.status_code == 200
+        return response.json()
 
     result = await async_benchmark(make_request, rounds=10)
-    assert result["mean"] < 0.1  # Should respond within 100ms
-    assert result["grade"] in ["A", "B"]  # Should have good performance grade
+    assert result["mean"] < 0.1  # should respond within 100ms
+```
+
+> 💡 Create the client **outside** the benchmarked function (as above, via a fixture). Otherwise every measured call also pays for client and connection setup.
+
+### FastMCP Tool Benchmarking
+
+Pass your `FastMCP` server object straight to `fastmcp.Client` and it connects in memory, with no subprocess or stdio. You measure your tool code plus the MCP protocol layer, which is what an agent calling your server experiences. See [`examples/fastmcp_examples.py`](examples/fastmcp_examples.py) for the complete example.
+
+```python
+import pytest
+from fastmcp import Client, FastMCP
+
+mcp = FastMCP("demo")
+
+
+@mcp.tool
+def add(a: int, b: int) -> int:
+    return a + b
+
+
+@pytest.fixture
+async def mcp_client():
+    async with Client(mcp) as client:  # in-memory transport
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_tool_call_latency(async_benchmark, mcp_client):
+    async def call_add():
+        result = await mcp_client.call_tool("add", {"a": 2, "b": 3})
+        assert result.data == 5
+
+    result = await async_benchmark(call_add, rounds=20, iterations=5)
+    assert result["mean"] < 0.05
 ```
 
 ### Quart API Endpoint Comparison
@@ -729,6 +787,9 @@ uv run pytest tests/ -v
 # Run examples
 uv run pytest examples/pytest_examples.py -v
 
+# FastAPI and FastMCP examples (Python 3.10+)
+uv run pytest examples/fastapi_examples.py examples/fastmcp_examples.py -v
+
 # Test real-world Quart API comparison
 uv run python examples/quart_api_comparison.py
 
@@ -770,7 +831,7 @@ uv run python scripts/release-check.py
 
 # This checks:
 # ✅ Git repository status
-# ✅ Version consistency 
+# ✅ Version consistency
 # ✅ Code formatting and linting
 # ✅ Test suite passes
 # ✅ Package builds successfully

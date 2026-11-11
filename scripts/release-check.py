@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 
 class Colors:
@@ -31,7 +32,7 @@ class Colors:
     END = "\033[0m"
 
 
-def run_command(cmd: str, cwd: str = None) -> tuple[bool, str, str]:
+def run_command(cmd: str, cwd: Optional[str] = None) -> tuple[bool, str, str]:
     """Run a command and return success status, stdout, and stderr."""
     try:
         result = subprocess.run(
@@ -106,7 +107,7 @@ def check_git_status() -> list[str]:
     return issues
 
 
-def check_version_consistency() -> tuple[list[str], str]:
+def check_version_consistency() -> tuple[list[str], Optional[str]]:
     """Check version consistency across files."""
     issues = []
     version = None
@@ -238,6 +239,16 @@ def check_tests() -> list[str]:
         if stdout:
             print_info(f"Files need formatting:\n{stdout}")
 
+    print_info("Running type checks...")
+    success, stdout, stderr = run_command("uv run ty check")
+    if success:
+        print_check(True, "ty type check passed")
+    else:
+        issues.append("ty type check failed")
+        print_check(False, "ty type check passed")
+        if stdout:
+            print_info(f"Type errors:\n{stdout}")
+
     print_info("Running main test suite...")
     success, stdout, stderr = run_command("uv run pytest tests/ -v --tb=short")
     if success:
@@ -351,7 +362,7 @@ def check_package_build() -> list[str]:
     return issues
 
 
-def print_summary(all_issues: list[str], version: str) -> bool:
+def print_summary(all_issues: list[str], version: Optional[str]) -> bool:
     """Print the final summary and next steps."""
     print_header("📊 Release Readiness Summary")
 

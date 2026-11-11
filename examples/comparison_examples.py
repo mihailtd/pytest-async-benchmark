@@ -133,6 +133,7 @@ async def main():
     if results:
         fastest = comparator.get_fastest_scenario()
         most_stable = comparator.get_most_stable_scenario()
+        assert fastest is not None and most_stable is not None
 
         print(f"🏆 Fastest scenario: {fastest['name']}")
         print(f"🎯 Most stable scenario: {most_stable['name']}")
