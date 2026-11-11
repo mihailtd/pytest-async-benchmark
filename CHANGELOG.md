@@ -20,9 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comparison tables now show p95 and p99
 - New examples: `examples/concurrency_examples.py`, plus concurrency tests in the FastAPI and FastMCP examples
 
-### ⚠️ Behavior changes
-- When `iterations > 1`, `min`, `max`, `median` and `stddev` now describe individual calls rather than round averages (`mean` is unchanged). `raw_times` keeps its previous meaning (one mean per round); per-call durations are in the new `samples` key
-- Benchmarks without an explicit `rounds` now run for about 1 second each instead of 5 calls. Pass `rounds=` or `--async-bench-max-time` to change this
+### ⚠️ Breaking changes
+No public function, fixture or result key was removed or renamed, but some behavior changed:
+
+- **Default number of calls**: benchmarks without `rounds` now run for ~1 second (at least 5 rounds, at most 10,000) instead of exactly 5 rounds. A fast function is now called hundreds of times instead of 6 (5 rounds + 1 warmup). This makes suites slower and matters if the benchmarked function has side effects (writes rows, sends requests, increments mocks). To restore the old behavior pass `rounds=5`, use `@pytest.mark.async_benchmark(rounds=5)`, or set `--async-bench-max-time=0`.
+- **Default `result["rounds"]`** is no longer `5` when `rounds` isn't given; it's however many rounds fit the time budget.
+- **Statistics with `iterations > 1`**: `min`, `max`, `median` and `stddev` now describe individual calls instead of round averages, so `max` can be higher and `min` lower than before (`mean` is unchanged). Latency assertions such as `assert result["max"] < 0.01` may need loosening. `raw_times` keeps its old meaning (one mean per round); per-call durations are in the new `samples` key.
+- **`AsyncBenchmarkRunner().rounds`** is now `None` when not given (was `5`).
+- **`rounds=0` / `iterations=0`** now raise `ValueError`. Previously they were silently replaced with 5 and 1.
+- **Terminal output**: the per-benchmark table and comparison tables show different rows (percentiles, ops/sec, samples). Anything parsing that output needs updating; use `--async-bench-json` for machine-readable results.
 
 ### 📝 Documentation
 - Removed `grade` and `grade_score` from the documented result keys; they were never returned
