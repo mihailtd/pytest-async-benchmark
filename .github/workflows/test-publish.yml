@@ -39,10 +39,15 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Verify release readiness
+      # Dev builds get a unique timestamped version, so the full release
+      # readiness check (clean tree, unused tag, ...) doesn't apply here.
+      - name: Lint, type check and test
         run: |
-          echo "🔍 Running release readiness checks..."
-          python scripts/release-check.py
+          uv sync --all-extras --dev
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run ty check
+          uv run pytest tests/ -q --tb=short
 
       - name: Create test version
         run: |

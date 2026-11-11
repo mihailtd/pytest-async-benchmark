@@ -694,27 +694,28 @@ async def test_tool_call_latency(async_benchmark, mcp_client):
 See the complete example in [`examples/quart_api_comparison.py`](examples/quart_api_comparison.py):
 
 ```python
-from pytest_async_benchmark import a_vs_b_comparison
-import asyncio
 import aiohttp
+import pytest
+
+from pytest_async_benchmark import a_vs_b_comparison
 
 
-async def test_api_v1():
-    async with aiohttp.ClientSession() as session:
-        async with session.get("http://localhost:5000/api/v1/data") as resp:
-            return await resp.json()
+@pytest.mark.asyncio
+async def test_api_v1_vs_v2():
+    async with aiohttp.ClientSession("http://localhost:5000") as session:
 
+        async def fetch_v1():
+            async with session.get("/api/v1/data") as resp:
+                return await resp.json()
 
-async def test_api_v2():
-    async with aiohttp.ClientSession() as session:
-        async with session.get("http://localhost:5000/api/v2/data") as resp:
-            return await resp.json()
+        async def fetch_v2():
+            async with session.get("/api/v2/data") as resp:
+                return await resp.json()
 
-
-# Compare API versions
-a_vs_b_comparison(
-    "API v1", test_api_v1, "API v2 (Optimized)", test_api_v2, rounds=10, iterations=5
-)
+        # Compare API versions (a_vs_b_comparison is async: await it)
+        await a_vs_b_comparison(
+            "API v1", fetch_v1, "API v2 (Optimized)", fetch_v2, rounds=10, iterations=5
+        )
 ```
 
 ### Database Query Benchmarking
