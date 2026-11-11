@@ -5,6 +5,28 @@ All notable changes to pytest-async-benchmark will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🚀 Major Features
+- **Concurrency Benchmarking**: `async_benchmark.concurrent(func, concurrency=..., total=..., timeout=...)` runs calls with N in flight at once and reports throughput, latency percentiles under load, errors, timeouts and event loop lag
+- **Regression Detection**: `--async-bench-autosave` saves numbered runs; `--async-bench-compare` compares against a saved run; `--async-bench-compare-fail=median:10%` fails the session only when a slowdown exceeds the threshold *and* is statistically significant (one-sided Mann-Whitney U test, pure Python)
+- **JSON Export**: `--async-bench-json=PATH` writes every result, including per-call samples, machine info and git commit info
+- **Task Leak Detection**: `leak_check=True` / `"warn"` (or `--async-bench-leak-check`) fails or warns when a benchmark leaves asyncio tasks running
+
+### 🔧 Improvements
+- **Per-call timing**: every call is timed individually; statistics are computed from all calls instead of from per-round averages
+- **Real percentiles**: results now include `p50`, `p75`, `p90`, `p95`, `p99`, plus `ops`, `count`, `total_time`, `samples` and `mode`
+- **Auto calibration**: without `rounds`, measurement runs for a time budget (`max_time`, default 1.0s, at least 5 rounds) instead of a fixed 5 calls; configurable per call, via the marker, or with `--async-bench-max-time`
+- Comparison tables now show p95 and p99
+- New examples: `examples/concurrency_examples.py`, plus concurrency tests in the FastAPI and FastMCP examples
+
+### ⚠️ Behavior changes
+- When `iterations > 1`, `min`, `max`, `median` and `stddev` now describe individual calls rather than round averages (`mean` is unchanged). `raw_times` keeps its previous meaning (one mean per round); per-call durations are in the new `samples` key
+- Benchmarks without an explicit `rounds` now run for about 1 second each instead of 5 calls. Pass `rounds=` or `--async-bench-max-time` to change this
+
+### 📝 Documentation
+- Removed `grade` and `grade_score` from the documented result keys; they were never returned
+
 ## [0.3.0] - 2026-11-10
 
 ### 🚀 Major Features

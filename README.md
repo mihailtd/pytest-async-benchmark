@@ -7,11 +7,15 @@ Modern pytest benchmarking for async code with beautiful terminal output and adv
 - 🎯 **Async-First**: Designed specifically for benchmarking `async def` functions
 - 🔌 **Pytest Integration**: Seamless integration as a pytest plugin with full **pytest-asyncio** support
 - 🎨 **Rich Output**: Beautiful terminal reporting powered by Rich!
-- 📊 **Comprehensive Stats**: Min, max, mean, median, std dev, percentiles, and more
+- 📊 **Comprehensive Stats**: Every call is timed individually: min, max, mean, median, std dev, p50/p75/p90/p95/p99, ops/sec
+- 🚦 **Concurrency Benchmarking**: `async_benchmark.concurrent()` reports throughput, latency under load, errors, timeouts and event loop lag
+- 📈 **Regression Detection**: Save runs, compare against a baseline, and fail CI only on statistically significant slowdowns
+- 🧹 **Task Leak Detection**: Optionally fail or warn when a benchmark leaves asyncio tasks running
+- 💾 **JSON Export**: `--async-bench-json` writes every result, including per-call samples
 - ⚖️ **A vs B Comparisons**: Compare different implementations side-by-side
 - 📈 **Multi-Scenario Analysis**: Benchmark multiple scenarios with detailed comparison tables
 - 🎯 **Performance Grading**: Automatic performance scoring and analysis
-- ⚡ **Auto Calibration**: Intelligent round and iteration detection
+- ⚡ **Auto Calibration**: Without `rounds`, measurement runs for a time budget (1s by default) instead of a fixed 5 calls
 - 🔄 **Quick Compare**: One-line comparison utilities
 - 🏆 **Winner Detection**: Automatic identification of best-performing implementation
 - 🚀 **Easy to Use**: Simple fixture-based API with native `async`/`await` support
@@ -488,49 +492,180 @@ def test_multi_scenario():
     assert fastest.name == "Database Query v2"
 ```
 
+## 🚦 Concurrency Benchmarking
+
+Async code is about concurrency, so measuring one call at a time misses a whole class of problems. `async_benchmark.concurrent()` runs `total` calls with `concurrency` of them in flight at once:
+
+```python
+@pytest.mark.asyncio
+async def test_fetch_under_load(async_benchmark, client):
+    async def fetch_item():
+        response = await client.get("/items/1")
+        response.raise_for_status()
+
+    result = await async_benchmark.concurrent(
+        fetch_item,
+        concurrency=50,  # calls in flight at once
+        total=1000,  # calls in total
+        timeout=1.0,  # optional per-call timeout
+    )
+
+    assert result["errors"] == 0
+    assert result["p99"] < 0.1  # latency under load
+    assert result["loop_lag_max"] < 0.05  # nothing blocks the event loop
+    print(f"{result['throughput']:.0f} calls/s")
+```
+
+**What it reports:**
+
+| Key | Meaning |
+|---|---|
+| `throughput` | Completed calls per second of wall time |
+| `p50` … `p99`, `min`, `max`, `mean` | Latency of successful calls, timed per call from when a worker starts it |
+| `errors`, `error_types`, `first_error` | Calls that raised (counted, not timed). `error_types` maps exception names to counts |
+| `timeouts` | Calls that exceeded `timeout` (counted, not timed) |
+| `completed`, `total`, `concurrency`, `wall_time` | What actually ran |
+| `loop_lag_mean`, `loop_lag_p99`, `loop_lag_max` | How late a short `asyncio.sleep` woke up during the run. High lag means something blocked the event loop |
+
+**How it works:** a fixed pool of `concurrency` workers pulls from a shared counter until `total` calls are done. It's a closed-loop model: like N clients that each send their next request as soon as the previous one returns. A few warmup calls (one per worker by default, configurable with `warmup=`) run first and aren't measured. If every call fails, it raises instead of reporting empty statistics.
+
+**What it's good for:** catching problems that only appear under concurrency, such as a connection pool smaller than your concurrency, a lock held across I/O that serializes callers, or a blocking call (`time.sleep`, a sync database driver, heavy CPU work) stalling the event loop. See [`examples/concurrency_examples.py`](examples/concurrency_examples.py) for each of these.
+
+> ⚠️ **This is not a load test.** Everything runs in one process and one event loop. When you benchmark a FastAPI app through `httpx.ASGITransport`, the client and the app share that loop and that CPU core, so `throughput` describes that setup, not what your deployed service can handle. To measure production capacity, use a load-testing tool such as [Locust](https://locust.io/) or [k6](https://k6.io/) against a real deployment. Use `concurrent()` to compare implementations and catch regressions in how your code behaves under concurrency.
+
+Concurrency settings can also come from the marker: `@pytest.mark.async_benchmark(concurrency=20, total=500, timeout=1.0)`.
+
+## 🧹 Task Leak Detection
+
+A common async bug is starting a background task (`asyncio.create_task`, `ensure_future`) and never awaiting or cancelling it. Turn on `leak_check` to catch it:
+
+```python
+@pytest.mark.asyncio
+async def test_no_dangling_tasks(async_benchmark):
+    result = await async_benchmark(my_handler, leak_check=True)
+    # raises TaskLeakError if my_handler left asyncio tasks running
+```
+
+- `leak_check=True` (or `"fail"`) raises `TaskLeakError`, a subclass of `AssertionError`, naming the leaked tasks.
+- `leak_check="warn"` emits a `TaskLeakWarning` instead.
+- It works with `async_benchmark(...)`, `.pedantic(...)` and `.concurrent(...)`, via the marker (`@pytest.mark.async_benchmark(leak_check="warn")`), or for every benchmark with `--async-bench-leak-check=warn|fail`.
+
+The task snapshot is taken **after warmup**, so a background task that a library starts once on first use (such as a connection pool's keepalive) isn't reported as a leak.
+
+## 📈 Saving Results & Catching Regressions in CI
+
+The command-line options follow [pytest-benchmark](https://pytest-benchmark.readthedocs.io/)'s conventions, with an `--async-bench-` prefix.
+
+```bash
+# Export every result (including per-call samples) as JSON
+pytest --async-bench-json=benchmarks.json
+
+# Save this run as a baseline: .async_benchmarks/<machine-id>/0001_<commit>_<time>.json
+pytest --async-bench-autosave
+
+# Compare against the latest saved run, and fail on a significant slowdown of >10% in the median
+pytest --async-bench-compare --async-bench-compare-fail=median:10%
+```
+
+**Why not just a percentage threshold?** Shared CI runners easily vary 10-20% between runs, so a plain "fail if more than 15% slower" rule fails builds at random. A benchmark only counts as a regression when it is **both**:
+
+1. slower than the baseline by more than your `--async-bench-compare-fail` threshold, **and**
+2. significantly slower according to a one-sided [Mann-Whitney U test](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test) on the per-call samples (p < 0.05 by default).
+
+Benchmarks with fewer than 5 samples on either side are reported as `insufficient samples` and never fail the build. The test runs in pure Python, so there's no SciPy dependency.
+
+The comparison table is printed at the end of the session:
+
+```
+                                 Comparison with baseline (median latency)
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Benchmark                          ┃ Baseline ┃ Current ┃ Change ┃ p (slower) ┃ Status                  ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ tests/test_api.py::test_get_user   │  1.055ms │ 2.059ms │ +95.2% │   1.51e-11 │ regression (median:10%) │
+│ tests/test_api.py::test_list_users │  2.057ms │ 2.058ms │  +0.0% │      0.163 │ unchanged               │
+└────────────────────────────────────┴──────────┴─────────┴────────┴────────────┴─────────────────────────┘
+❌ 1 benchmark(s) regressed beyond --async-bench-compare-fail thresholds
+```
+
+Statuses: `regression` (fails the session), `slower` (significant, but within your thresholds), `faster`, `unchanged`, `insufficient samples`, and `new` (not in the baseline).
+
+| Option | Description |
+|---|---|
+| `--async-bench-json=PATH` | Write all results to `PATH` as JSON |
+| `--async-bench-autosave` | Save results as the next numbered run in the storage directory |
+| `--async-bench-storage=DIR` | Storage directory (default `.async_benchmarks`) |
+| `--async-bench-compare[=NUM\|PATH]` | Compare with the latest saved run, run number `NUM`, or a JSON file |
+| `--async-bench-compare-fail=EXPR` | Fail on a significant regression beyond `EXPR`: `metric:N%` or `metric:SECONDS`. Metrics: `min`, `max`, `mean`, `median`, `p50`-`p99`. Repeatable |
+| `--async-bench-compare-alpha=A` | Significance level for the Mann-Whitney U test (default `0.05`) |
+| `--async-bench-max-time=SECONDS` | Time budget for calibrating rounds when none are given (default `1.0`) |
+| `--async-bench-leak-check=warn\|fail` | Turn on task leak detection for every benchmark |
+
+**A typical CI setup** compares against a baseline saved from your main branch:
+
+```bash
+# On main: produce the baseline (cache or upload .async_benchmarks/ as a CI artifact)
+pytest tests/benchmarks --async-bench-autosave
+
+# On pull requests: restore .async_benchmarks/, then compare
+pytest tests/benchmarks --async-bench-compare --async-bench-compare-fail=median:15%
+```
+
+Baselines are stored per machine ID (OS, Python implementation and version), because timings from different machines aren't comparable. For the most reliable results, compare runs from the same runner type. Each saved run includes git commit info. The saved files keep up to 10,000 samples per benchmark, evenly downsampled from larger runs. No hostname is recorded.
+
 ## 📊 Comprehensive Statistics
 
-Each benchmark returns detailed statistics:
+Each benchmark times **every call individually** and returns:
 
 ```python
 {
-    "min": 0.001234,  # Minimum execution time
-    "max": 0.005678,  # Maximum execution time
-    "mean": 0.002456,  # Mean execution time
-    "median": 0.002123,  # Median execution time
+    "min": 0.001234,  # Fastest call
+    "max": 0.005678,  # Slowest call
+    "mean": 0.002456,  # Mean call duration
+    "median": 0.002123,  # Median call duration (same as p50)
     "stddev": 0.000234,  # Standard deviation
-    "p50": 0.002123,  # 50th percentile (median)
-    "p90": 0.003456,  # 90th percentile
-    "p95": 0.004123,  # 95th percentile
-    "p99": 0.004789,  # 99th percentile
-    "rounds": 5,  # Number of rounds executed
-    "iterations": 1,  # Number of iterations per round
-    "raw_times": [...],  # List of raw timing measurements
-    "grade": "A",  # Performance grade (A-F)
-    "grade_score": 87.5,  # Numeric grade score (0-100)
+    "p50": 0.002123,  # Percentiles (linear interpolation, like NumPy)
+    "p75": 0.002801,
+    "p90": 0.003456,
+    "p95": 0.004123,
+    "p99": 0.004789,
+    "ops": 407.2,  # Calls per second (1 / mean)
+    "count": 120,  # Number of timed calls
+    "total_time": 0.294,  # Sum of all call durations
+    "rounds": 120,  # Rounds executed
+    "iterations": 1,  # Calls per round
+    "calibrated": True,  # Rounds were chosen automatically
+    "mode": "sequential",  # "sequential", "pedantic" or "concurrent"
+    "samples": [...],  # Every call's duration, in seconds
+    "raw_times": [...],  # Mean duration of each round
 }
 ```
+
+All times are in seconds. With `leak_check` enabled, results also include `leaked_tasks`.
+
+**Calibration:** when `rounds` isn't given (as an argument or in the marker), the benchmark keeps measuring until it has spent `max_time` seconds (default 1.0s), with at least 5 rounds and at most 10,000. Pass `rounds=` for a fixed count, or `max_time=` (or `--async-bench-max-time`) to change the budget.
 
 ## 🎨 Beautiful Terminal Output
 
 ### Basic Benchmark Output
 
 ```
-🚀 Async Benchmark Results: test_my_function
-┏━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
-┃ Metric      ┃ Value      ┃
-┡━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ Min         │ 10.234ms   │
-│ Max         │ 15.678ms   │
-│ Mean        │ 12.456ms   │
-│ Median      │ 12.123ms   │
-│ Std Dev     │ 1.234ms    │
-│ 95th %ile   │ 14.567ms   │
-│ 99th %ile   │ 15.234ms   │
-│ Grade       │ A (87.5)   │
-│ Rounds      │ 5          │
-│ Iterations  │ 1          │
-└─────────────┴────────────┘
+   🚀 Async Benchmark Results:
+        test_my_function
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ Metric     ┃ Value            ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ Min        │ 10.048ms         │
+│ Median     │ 10.066ms         │
+│ Mean       │ 10.072ms         │
+│ p95        │ 10.084ms         │
+│ p99        │ 10.143ms         │
+│ Max        │ 10.513ms         │
+│ Std Dev    │ 45.789μs         │
+│ Ops/sec    │ 99.3             │
+│ Samples    │ 100              │
+│ Rounds     │ 100 (calibrated) │
+│ Iterations │ 1                │
+└────────────┴──────────────────┘
 ✅ Benchmark completed successfully!
 ```
 
@@ -561,12 +696,15 @@ pytest-async-benchmark/
 │       ├── plugin.py            # Pytest plugin and fixtures
 │       ├── runner.py            # Core benchmarking engine
 │       ├── display.py           # Rich terminal output formatting
-│       ├── stats.py             # Statistical calculations
+│       ├── stats.py             # Statistics and percentiles
+│       ├── storage.py           # JSON export, autosave and baselines
+│       ├── regression.py        # Noise-aware comparison (Mann-Whitney U)
 │       ├── utils.py             # Utility functions
 │       ├── analytics.py         # Performance analysis tools
 │       └── comparison.py        # A vs B comparison functionality
 ├── examples/
 │   ├── pytest_examples.py      # Comprehensive pytest usage examples
+│   ├── concurrency_examples.py  # Pool starvation, locks, blocking calls
 │   ├── fastapi_examples.py      # FastAPI endpoint benchmarking
 │   ├── fastmcp_examples.py      # FastMCP tool/resource benchmarking
 │   ├── quart_api_comparison.py  # Real-world API endpoint comparison
@@ -588,6 +726,13 @@ Comprehensive pytest usage examples including:
 - Advanced configuration options
 - Performance assertions and testing patterns
 - Using markers for benchmark organization
+
+### 🚦 [`examples/concurrency_examples.py`](examples/concurrency_examples.py)
+Bugs that only appear under concurrency, and how `concurrent()` exposes them:
+- Connection pool starvation (tail latency balloons)
+- A lock held across I/O that serializes callers
+- A blocking call that stalls the event loop (loop lag)
+- Timeouts and errors as part of the result
 
 ### ⚡ [`examples/fastapi_examples.py`](examples/fastapi_examples.py)
 FastAPI endpoint benchmarking (Python 3.10+):
@@ -745,18 +890,31 @@ async def test_performance(async_benchmark):
 
 ## 📋 API Reference
 
-### `async_benchmark(func, *args, rounds=None, iterations=None, warmup_rounds=1, **kwargs)`
+### `async_benchmark(func, *args, rounds=None, iterations=None, warmup_rounds=1, max_time=None, leak_check=None, **kwargs)`
 
 **Parameters:**
 - `func`: The async function to benchmark
 - `*args`: Positional arguments to pass to the function
-- `rounds`: Number of measurement rounds (default: 5)
-- `iterations`: Number of iterations per round (default: 1)
+- `rounds`: Number of measurement rounds (default: calibrated, see [Comprehensive Statistics](#-comprehensive-statistics))
+- `iterations`: Number of calls per round (default: 1)
 - `warmup_rounds`: Number of warmup rounds before measurement (default: 1)
+- `max_time`: Time budget in seconds for calibrating rounds (default: 1.0)
+- `leak_check`: `True`/`"fail"` or `"warn"` to detect leaked asyncio tasks (default: off)
 - `**kwargs`: Keyword arguments to pass to the function
 
-**Returns:**
-A dictionary with comprehensive statistics including min, max, mean, median, stddev, percentiles, performance grade, and raw measurements.
+**Returns:** a dictionary of statistics (see [Comprehensive Statistics](#-comprehensive-statistics)).
+
+### `async_benchmark.pedantic(func, *args, setup=None, teardown=None, rounds=None, iterations=None, warmup_rounds=None, max_time=None, leak_check=None, **kwargs)`
+
+Like `async_benchmark(...)`, but runs `setup` and `teardown` around every call without timing them. See [Pedantic Mode](#-pedantic-mode-setup--teardown-excluded-from-timing).
+
+### `async_benchmark.concurrent(func, *args, concurrency=10, total=100, timeout=None, warmup=None, leak_check=None, **kwargs)`
+
+Runs `total` calls with `concurrency` in flight at once. See [Concurrency Benchmarking](#-concurrency-benchmarking).
+
+### Marker
+
+`@pytest.mark.async_benchmark(...)` accepts `rounds`, `iterations`, `warmup_rounds`, `max_time`, `leak_check`, `concurrency`, `total` and `timeout`. Arguments passed directly to the call take precedence.
 
 ### Comparison Functions
 
@@ -787,6 +945,9 @@ uv run pytest tests/ -v
 
 # Run examples
 uv run pytest examples/pytest_examples.py -v
+
+# Concurrency examples (pool starvation, locks, blocking calls)
+uv run pytest examples/concurrency_examples.py -v -s
 
 # FastAPI and FastMCP examples (Python 3.10+)
 uv run pytest examples/fastapi_examples.py examples/fastmcp_examples.py -v

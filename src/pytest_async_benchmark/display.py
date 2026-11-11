@@ -66,7 +66,7 @@ def display_comparison_table(
                 values.append("N/A")
         return values
 
-    metrics = ["min", "max", "mean", "median", "stddev"]
+    metrics = ["min", "max", "mean", "median", "p95", "p99", "stddev"]
 
     for metric in metrics:
         row = [metric.title()]

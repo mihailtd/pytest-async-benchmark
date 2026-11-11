@@ -58,7 +58,7 @@ jobs:
 
       - name: Test examples
         run: |
-          uv run python -m pytest examples/pytest_examples.py examples/pedantic_examples.py examples/fastapi_examples.py examples/fastmcp_examples.py -v -rs
+          uv run python -m pytest examples/pytest_examples.py examples/pedantic_examples.py examples/concurrency_examples.py examples/fastapi_examples.py examples/fastmcp_examples.py -v -rs
           uv run python examples/comparison_examples.py
 
       - name: Test package build
