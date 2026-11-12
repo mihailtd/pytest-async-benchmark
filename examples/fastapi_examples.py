@@ -1,7 +1,7 @@
 """Benchmarking FastAPI endpoints with pytest-async-benchmark.
 
 The app is called in-process through httpx's ASGITransport: no server, no
-network, no ports. Requires Python 3.10+ and `fastapi` + `httpx`.
+network, no ports. Requires `fastapi` + `httpx`.
 
 Run with:
     uv run pytest examples/fastapi_examples.py -v

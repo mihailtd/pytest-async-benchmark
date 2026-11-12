@@ -15,7 +15,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 class Colors:
@@ -32,7 +31,7 @@ class Colors:
     END = "\033[0m"
 
 
-def run_command(cmd: str, cwd: Optional[str] = None) -> tuple[bool, str, str]:
+def run_command(cmd: str, cwd: str | None = None) -> tuple[bool, str, str]:
     """Run a command and return success status, stdout, and stderr."""
     try:
         result = subprocess.run(
@@ -107,7 +106,7 @@ def check_git_status() -> list[str]:
     return issues
 
 
-def check_version_consistency() -> tuple[list[str], Optional[str]]:
+def check_version_consistency() -> tuple[list[str], str | None]:
     """Check version consistency across files."""
     issues = []
     version = None
@@ -130,11 +129,14 @@ def check_version_consistency() -> tuple[list[str], Optional[str]]:
                 version = version_match.group(1)
                 print_check(True, f"Version found in pyproject.toml: {version}")
 
-                if re.match(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$", version):
+                # PEP 440 release versions: 1.2.3, 1.2.3rc1, 1.2.3b2, 1.2.3.post1
+                if re.match(
+                    r"^\d+\.\d+\.\d+((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?$", version
+                ):
                     print_check(True, f"Version format is valid: {version}")
                 else:
                     issues.append(
-                        f"Version format invalid: {version} (should be X.Y.Z or X.Y.Z-suffix)"
+                        f"Version format invalid: {version} (expected X.Y.Z, X.Y.ZrcN, X.Y.ZbN or X.Y.ZaN)"
                     )
                     print_check(False, "Version format is valid")
             else:
@@ -362,7 +364,7 @@ def check_package_build() -> list[str]:
     return issues
 
 
-def print_summary(all_issues: list[str], version: Optional[str]) -> bool:
+def print_summary(all_issues: list[str], version: str | None) -> bool:
     """Print the final summary and next steps."""
     print_header("📊 Release Readiness Summary")
 

@@ -4,9 +4,9 @@ import asyncio
 import inspect
 import io
 import warnings
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import pytest
 from rich.console import Console
@@ -16,7 +16,7 @@ from . import regression, storage
 from .display import format_time
 from .runner import AsyncBenchmarkRunner
 
-LeakCheck = Union[bool, str, None]
+LeakCheck = bool | str | None
 
 _ENTRIES_KEY = pytest.StashKey[list[dict[str, Any]]]()
 _SUMMARY_KEY = pytest.StashKey[list[str]]()
@@ -138,7 +138,7 @@ class AsyncBenchmarkFixture:
         return {}
 
     def _option(self, name: str) -> Any:
-        return self.request.config.getoption(name, default=None)
+        return _setting(self.request.config, name)
 
     def _resolve(self, value: Any, key: str, default: Any = None) -> Any:
         """Explicit argument, then marker kwarg, then ``default``."""
@@ -148,10 +148,10 @@ class AsyncBenchmarkFixture:
 
     def _make_runner(
         self,
-        rounds: Optional[int],
-        iterations: Optional[int],
+        rounds: int | None,
+        iterations: int | None,
         warmup_rounds: int,
-        max_time: Optional[float],
+        max_time: float | None,
         leak_mode: str,
     ) -> AsyncBenchmarkRunner:
         return AsyncBenchmarkRunner(
@@ -214,10 +214,10 @@ class AsyncBenchmarkFixture:
         self,
         func: Callable,
         *args,
-        rounds: Optional[int] = None,
-        iterations: Optional[int] = None,
+        rounds: int | None = None,
+        iterations: int | None = None,
         warmup_rounds: int = 1,
-        max_time: Optional[float] = None,
+        max_time: float | None = None,
         leak_check: LeakCheck = None,
         **kwargs,
     ) -> Any:
@@ -254,15 +254,15 @@ class AsyncBenchmarkFixture:
         self,
         func: Callable,
         *target_args,
-        setup: Optional[Callable] = None,
-        teardown: Optional[Callable] = None,
-        rounds: Optional[int] = None,
-        iterations: Optional[int] = None,
-        warmup_rounds: Optional[int] = None,
-        max_time: Optional[float] = None,
+        setup: Callable | None = None,
+        teardown: Callable | None = None,
+        rounds: int | None = None,
+        iterations: int | None = None,
+        warmup_rounds: int | None = None,
+        max_time: float | None = None,
         leak_check: LeakCheck = None,
-        args: Optional[tuple] = None,
-        kwargs: Optional[dict[str, Any]] = None,
+        args: tuple | None = None,
+        kwargs: dict[str, Any] | None = None,
         **extra_kwargs,
     ) -> Any:
         """Benchmark an async function in pedantic mode with setup and teardown.
@@ -313,10 +313,10 @@ class AsyncBenchmarkFixture:
         self,
         func: Callable,
         *args,
-        concurrency: Optional[int] = None,
-        total: Optional[int] = None,
-        timeout: Optional[float] = None,
-        warmup: Optional[int] = None,
+        concurrency: int | None = None,
+        total: int | None = None,
+        timeout: float | None = None,
+        warmup: int | None = None,
         leak_check: LeakCheck = None,
         **kwargs,
     ) -> Any:
@@ -430,7 +430,47 @@ def async_benchmark(request: pytest.FixtureRequest) -> AsyncBenchmarkFixture:
 # ---------------------------------------------------------------------------
 
 
+#: Options that can also be set once in the pytest config file (ini, toml,
+#: setup.cfg). A command-line flag takes precedence over the config file.
+_INI_SETTINGS = {
+    "async_bench_max_time": (
+        "Time budget in seconds used to calibrate rounds when none are given "
+        "(default: 1.0). 0 runs the minimum of 5 rounds."
+    ),
+    "async_bench_leak_check": "Default leak check for every benchmark: off, warn or fail.",
+}
+
+
+def _parse_setting(name: str, raw: str) -> Any:
+    """Convert and validate a config-file value."""
+    raw = raw.strip()
+    if name == "async_bench_max_time":
+        try:
+            value = float(raw)
+        except ValueError:
+            value = -1.0
+        if value < 0:
+            raise pytest.UsageError(
+                f"{name} must be a non-negative number of seconds, got {raw!r}"
+            )
+        return value
+    if raw.lower() not in ("off", "warn", "fail"):
+        raise pytest.UsageError(f"{name} must be off, warn or fail, got {raw!r}")
+    return raw.lower()
+
+
+def _setting(config: pytest.Config, name: str) -> Any:
+    """Read an option: command line first, then the config file, else None."""
+    value = config.getoption(name, default=None)
+    if value is not None or name not in _INI_SETTINGS:
+        return value
+    raw = config.getini(name)
+    return _parse_setting(name, raw) if raw else None
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
+    for name, help_text in _INI_SETTINGS.items():
+        parser.addini(name, help_text, default="")
     group = parser.getgroup("async-benchmark", "async benchmarking")
     group.addoption(
         "--async-bench-max-time",
@@ -492,6 +532,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest plugin."""
+    for name in _INI_SETTINGS:  # fail fast on a bad config-file value
+        _setting(config, name)
     config.addinivalue_line(
         "markers",
         "async_benchmark(rounds=None, iterations=None, warmup_rounds=1, "
@@ -569,13 +611,13 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         summary.append(f"Saved benchmark run to {written}")
 
 
-def _format_change(change: Optional[float]) -> str:
+def _format_change(change: float | None) -> str:
     if change is None:
         return "-"
     return f"{change * 100:+.1f}%"
 
 
-def _format_p(value: Optional[float]) -> str:
+def _format_p(value: float | None) -> str:
     return "-" if value is None else f"{value:.3g}"
 
 

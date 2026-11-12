@@ -4,7 +4,8 @@ import asyncio
 import inspect
 import statistics
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from .stats import compute_stats
 
@@ -51,12 +52,12 @@ class AsyncBenchmarkRunner:
 
     def __init__(
         self,
-        rounds: Optional[int] = None,
-        iterations: Optional[int] = None,
+        rounds: int | None = None,
+        iterations: int | None = None,
         warmup_rounds: int = 1,
-        max_time: Optional[float] = None,
-        min_rounds: Optional[int] = None,
-        max_rounds: Optional[int] = None,
+        max_time: float | None = None,
+        min_rounds: int | None = None,
+        max_rounds: int | None = None,
         leak_check: bool = False,
     ):
         if rounds is not None and rounds < 1:
@@ -86,7 +87,7 @@ class AsyncBenchmarkRunner:
         return time.perf_counter() - started < self.max_time
 
     @staticmethod
-    async def _call_hook(hook: Optional[Callable], *hook_args) -> Any:
+    async def _call_hook(hook: Callable | None, *hook_args) -> Any:
         """Call a sync or async hook function."""
         if hook is None:
             return None
@@ -99,8 +100,8 @@ class AsyncBenchmarkRunner:
         self,
         func: Callable,
         *args,
-        setup: Optional[Callable] = None,
-        teardown: Optional[Callable] = None,
+        setup: Callable | None = None,
+        teardown: Callable | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Run benchmark for an async function.
@@ -145,8 +146,8 @@ class AsyncBenchmarkRunner:
         func: Callable,
         args: tuple,
         kwargs: dict[str, Any],
-        setup: Optional[Callable],
-        teardown: Optional[Callable],
+        setup: Callable | None,
+        teardown: Callable | None,
     ) -> float:
         """Run setup, a timed call, and teardown. Return the call's duration."""
         setup_res = await self._call_hook(setup)
@@ -173,8 +174,8 @@ class AsyncBenchmarkRunner:
         self,
         func: Callable,
         *args,
-        setup: Optional[Callable] = None,
-        teardown: Optional[Callable] = None,
+        setup: Callable | None = None,
+        teardown: Callable | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Run benchmark for an async function with setup/teardown excluded from timing."""
@@ -211,8 +212,8 @@ class AsyncBenchmarkRunner:
         *args,
         concurrency: int = 10,
         total: int = 100,
-        timeout: Optional[float] = None,
-        warmup: Optional[int] = None,
+        timeout: float | None = None,
+        warmup: int | None = None,
         **kwargs,
     ) -> dict[str, Any]:
         """Benchmark ``func`` with ``concurrency`` calls in flight at once.
@@ -360,7 +361,7 @@ class AsyncBenchmarkRunner:
     def _calculate_stats(
         self,
         samples: list[float],
-        round_means: Optional[list[float]] = None,
+        round_means: list[float] | None = None,
         mode: str = "sequential",
     ) -> dict[str, Any]:
         """Calculate statistics from per-call samples.

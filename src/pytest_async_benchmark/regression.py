@@ -15,7 +15,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import cache
-from typing import Any, Optional
+from typing import Any
 
 #: Fewer samples than this on either side: no significance claim is made.
 MIN_SAMPLES = 5
@@ -171,14 +171,14 @@ class BenchmarkComparison:
 
     fullname: str
     status: str
-    baseline_median: Optional[float] = None
-    current_median: Optional[float] = None
-    p_slower: Optional[float] = None
-    p_faster: Optional[float] = None
+    baseline_median: float | None = None
+    current_median: float | None = None
+    p_slower: float | None = None
+    p_faster: float | None = None
     failed_thresholds: list[str] = field(default_factory=list)
 
     @property
-    def change(self) -> Optional[float]:
+    def change(self) -> float | None:
         """Relative change of the median (0.1 means 10% slower)."""
         if not self.baseline_median or self.current_median is None:
             return None
@@ -188,7 +188,7 @@ class BenchmarkComparison:
 def compare_benchmark(
     fullname: str,
     current: dict[str, Any],
-    baseline: Optional[dict[str, Any]],
+    baseline: dict[str, Any] | None,
     thresholds: Sequence[FailThreshold] = (),
     alpha: float = 0.05,
 ) -> BenchmarkComparison:

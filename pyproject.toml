@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-async-benchmark"
-version = "0.3.0"
+version = "0.4.0"
 description = "pytest-async-benchmark: Modern pytest benchmarking for async code. 🚀"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Mihai Farcas", email = "contact@mihai.ltd" },
 ]
@@ -32,10 +32,10 @@ dev = [
     "ruff>=0.11.11",
     "quart>=0.20.0",
     "aiohttp>=3.12.1",
-    # FastAPI / FastMCP examples (both require Python 3.10+)
-    "fastapi>=0.115.0; python_version >= '3.10'",
-    "httpx>=0.27.0; python_version >= '3.10'",
-    "fastmcp>=2.10.0; python_version >= '3.10'",
+    # FastAPI / FastMCP examples
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "fastmcp>=2.10.0",
     "pre-commit>=3.6.0",
     # ty is pre-1.0: pin exactly so new releases can't break CI unannounced
     "ty==0.0.101",
@@ -55,7 +55,7 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [

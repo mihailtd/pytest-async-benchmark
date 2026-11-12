@@ -239,3 +239,82 @@ def test_commit_info_comes_from_project_root(bench, monkeypatch, tmp_path_factor
     ).assert_outcomes(passed=2)
     report = json.loads(out.read_text())
     assert report["commit_info"]["id"] == head
+
+
+CALIBRATION_CHECK = """
+import asyncio
+
+async def work():
+    await asyncio.sleep(0.001)
+
+def test_calibrated(async_benchmark):
+    result = async_benchmark(work)
+    assert result["rounds"] == {rounds}
+"""
+
+
+def test_ini_max_time(pytester):
+    pytester.makeini(
+        "[pytest]\n"
+        "asyncio_default_fixture_loop_scope = function\n"
+        "async_bench_max_time = 0\n"
+    )
+    pytester.makepyfile(CALIBRATION_CHECK.format(rounds=5))
+    pytester.runpytest().assert_outcomes(passed=1)
+
+
+def test_cli_max_time_overrides_ini(pytester):
+    pytester.makeini(
+        "[pytest]\n"
+        "asyncio_default_fixture_loop_scope = function\n"
+        "async_bench_max_time = 0\n"
+    )
+    pytester.makepyfile(
+        CALIBRATION_CHECK.replace(
+            'assert result["rounds"] == {rounds}', 'assert result["rounds"] > 5'
+        )
+    )
+    pytester.runpytest("--async-bench-max-time=0.2").assert_outcomes(passed=1)
+
+
+def test_pyproject_settings(pytester):
+    pytester.makepyprojecttoml(
+        """
+        [tool.pytest.ini_options]
+        asyncio_default_fixture_loop_scope = "function"
+        async_bench_max_time = "0"
+        async_bench_leak_check = "fail"
+        """
+    )
+    pytester.makepyfile(
+        """
+        import asyncio
+
+        async def leaky():
+            asyncio.ensure_future(asyncio.sleep(0.5))
+
+        def test_leaky(async_benchmark):
+            async_benchmark(leaky)
+        """
+    )
+    result = pytester.runpytest()
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines(["*TaskLeakError*"])
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("async_bench_max_time = soon", "*async_bench_max_time must be*"),
+        ("async_bench_max_time = -1", "*async_bench_max_time must be*"),
+        ("async_bench_leak_check = maybe", "*async_bench_leak_check must be*"),
+    ],
+)
+def test_invalid_ini_settings(pytester, line, message):
+    pytester.makeini(
+        f"[pytest]\nasyncio_default_fixture_loop_scope = function\n{line}\n"
+    )
+    pytester.makepyfile("def test_nothing(): pass")
+    result = pytester.runpytest()
+    assert result.ret == pytest.ExitCode.USAGE_ERROR
+    result.stderr.fnmatch_lines([message])

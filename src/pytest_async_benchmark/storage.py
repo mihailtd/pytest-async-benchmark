@@ -13,7 +13,7 @@ import platform
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 #: Samples kept per benchmark in saved files. Larger sets are downsampled
 #: evenly over the sorted values, which preserves the distribution's shape.
@@ -46,7 +46,7 @@ def machine_info() -> dict[str, Any]:
     }
 
 
-def _git(*args: str, cwd: Optional[Path] = None) -> Optional[str]:
+def _git(*args: str, cwd: Path | None = None) -> str | None:
     try:
         out = subprocess.run(
             ["git", *args],
@@ -61,7 +61,7 @@ def _git(*args: str, cwd: Optional[Path] = None) -> Optional[str]:
     return out.stdout.strip()
 
 
-def commit_info(cwd: Optional[Path] = None) -> dict[str, Any]:
+def commit_info(cwd: Path | None = None) -> dict[str, Any]:
     """Return the git commit, branch and dirty state of the repo at ``cwd``.
 
     Returns an empty dict outside a git repository.
@@ -116,7 +116,7 @@ def benchmark_record(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_report(
-    entries: list[dict[str, Any]], version: str, root: Optional[Path] = None
+    entries: list[dict[str, Any]], version: str, root: Path | None = None
 ) -> dict[str, Any]:
     """Build the full JSON report for a session (git info is read from ``root``)."""
     return {
@@ -128,7 +128,7 @@ def build_report(
     }
 
 
-def write_report(report: dict[str, Any], path: Union[str, Path]) -> Path:
+def write_report(report: dict[str, Any], path: str | Path) -> Path:
     """Write a report to ``path`` (creating parent directories)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -136,12 +136,12 @@ def write_report(report: dict[str, Any], path: Union[str, Path]) -> Path:
     return path
 
 
-def load_report(path: Union[str, Path]) -> dict[str, Any]:
+def load_report(path: str | Path) -> dict[str, Any]:
     """Load a report previously written by :func:`write_report`."""
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _run_number(path: Path) -> Optional[int]:
+def _run_number(path: Path) -> int | None:
     match = _SAVE_NAME_RE.match(path.name)
     return int(match.group(1)) if match else None
 
@@ -155,7 +155,7 @@ def _saved_runs(directory: Path) -> list[Path]:
     )
 
 
-def autosave_path(storage: Union[str, Path], report: dict[str, Any]) -> Path:
+def autosave_path(storage: str | Path, report: dict[str, Any]) -> Path:
     """Return the next numbered file path for an autosaved report."""
     directory = Path(storage) / machine_id()
     last = max((_run_number(path) or 0 for path in _saved_runs(directory)), default=0)
@@ -166,7 +166,7 @@ def autosave_path(storage: Union[str, Path], report: dict[str, Any]) -> Path:
     return directory / f"{last + 1:04d}_{commit_id}_{stamp}{suffix}.json"
 
 
-def find_baseline(storage: Union[str, Path], selector: str = "") -> Path:
+def find_baseline(storage: str | Path, selector: str = "") -> Path:
     """Locate a saved report to compare against.
 
     ``selector`` may be empty (latest saved run for this machine), a run number

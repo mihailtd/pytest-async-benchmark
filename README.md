@@ -600,6 +600,15 @@ Statuses: `regression` (fails the session), `slower` (significant, but within yo
 | `--async-bench-max-time=SECONDS` | Time budget for calibrating rounds when none are given (default `1.0`) |
 | `--async-bench-leak-check=warn\|fail` | Turn on task leak detection for every benchmark |
 
+`max_time` and the leak check can also be set once in your pytest configuration. A command-line flag overrides it:
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+async_bench_max_time = "0.5"     # "0" = the minimum of 5 rounds, like v0.3.0
+async_bench_leak_check = "warn"  # off | warn | fail
+```
+
 **A typical CI setup** compares against a baseline saved from your main branch:
 
 ```bash
@@ -642,7 +651,7 @@ Each benchmark times **every call individually** and returns:
 
 All times are in seconds. With `leak_check` enabled, results also include `leaked_tasks`.
 
-**Calibration:** when `rounds` isn't given (as an argument or in the marker), the benchmark keeps measuring until it has spent `max_time` seconds (default 1.0s), with at least 5 rounds and at most 10,000. Pass `rounds=` for a fixed count, or `max_time=` (or `--async-bench-max-time`) to change the budget.
+**Calibration:** when `rounds` isn't given (as an argument or in the marker), the benchmark keeps measuring until it has spent `max_time` seconds (default 1.0s), with at least 5 rounds and at most 10,000. Pass `rounds=` for a fixed count, or `max_time=` (or `--async-bench-max-time`, or `async_bench_max_time` in your pytest config) to change the budget.
 
 ## 🎨 Beautiful Terminal Output
 
@@ -735,13 +744,13 @@ Bugs that only appear under concurrency, and how `concurrent()` exposes them:
 - Timeouts and errors as part of the result
 
 ### ⚡ [`examples/fastapi_examples.py`](examples/fastapi_examples.py)
-FastAPI endpoint benchmarking (Python 3.10+):
+FastAPI endpoint benchmarking:
 - In-process calls via `httpx.ASGITransport` (no server, no network)
 - Latency budgets with both fixture and marker syntax
 - A vs B comparison of two endpoint implementations
 
 ### 🤖 [`examples/fastmcp_examples.py`](examples/fastmcp_examples.py)
-FastMCP server benchmarking (Python 3.10+):
+FastMCP server benchmarking:
 - MCP tool and resource round-trip latency
 - In-memory client transport (no subprocess, no stdio)
 - A vs B comparison of two tool implementations
@@ -924,9 +933,9 @@ Runs `total` calls with `concurrency` in flight at once. See [Concurrency Benchm
 
 ## 📋 Requirements
 
-- Python ≥ 3.9
+- Python ≥ 3.10
 - pytest ≥ 8.3.5
-- pytest-asyncio ≥ 0.23.0 (automatically installed)
+- pytest-asyncio ≥ 0.23.0 for `await`-style tests (optional: `pip install "pytest-async-benchmark[asyncio]"`)
 
 Note: Rich (for beautiful terminal output) is automatically installed as a dependency.
 
@@ -949,7 +958,7 @@ uv run pytest examples/pytest_examples.py -v
 # Concurrency examples (pool starvation, locks, blocking calls)
 uv run pytest examples/concurrency_examples.py -v -s
 
-# FastAPI and FastMCP examples (Python 3.10+)
+# FastAPI and FastMCP examples
 uv run pytest examples/fastapi_examples.py examples/fastmcp_examples.py -v
 
 # Test real-world Quart API comparison
@@ -1019,7 +1028,7 @@ python scripts/quality-check.py
 
 This project uses GitHub Actions for automated testing and publishing to PyPI:
 
-- **Continuous Integration**: Tests run on every push for Python 3.9-3.13
+- **Continuous Integration**: Tests run on every push for Python 3.10-3.14
 - **Test Publishing**: Automatic uploads to TestPyPI for testing releases
 - **Production Releases**: Secure publishing to PyPI using trusted publishing
 - **Release Validation**: Comprehensive checks ensure package quality

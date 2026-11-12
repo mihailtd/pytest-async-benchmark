@@ -1,11 +1,12 @@
 name: Release to PyPI
 
 on:
+  # Pushing a vX.Y.Z tag is the release. The GitHub release is created by the
+  # create-github-release job below, so there is no `release: published` trigger
+  # (it would publish the same version to PyPI twice).
   push:
     tags:
       - "v*"
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -43,9 +44,7 @@ jobs:
       - name: Get version from tag or input
         id: get-version
         run: |
-          if [ "${{ github.event_name }}" == "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_type }}" == "tag" ]; then
+          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_type }}" == "tag" ]; then
             VERSION="${{ github.ref_name }}"
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
@@ -126,7 +125,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout repository
@@ -232,30 +231,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Create Release
-        uses: actions/create-release@v1
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          # Everything between "## [VERSION]" and the next "## [" heading.
+          awk -v version="$VERSION" '
+            index($0, "## [" version "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+
+          if [ ! -s notes.md ]; then
+            echo "⚠️ No CHANGELOG.md section for $VERSION, using a link instead"
+            echo "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md)." > notes.md
+          fi
+
+          {
+            echo ""
+            echo "### 📦 Installation"
+            echo '```bash'
+            echo "pip install pytest-async-benchmark==$VERSION"
+            echo '```'
+            echo ""
+            echo "**PyPI:** https://pypi.org/project/pytest-async-benchmark/$VERSION/"
+          } >> notes.md
+          cat notes.md
+
+      - name: Create GitHub release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: "Release ${{ github.ref_name }}"
-          draft: false
-          prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
-          body: |
-            ## 🚀 pytest-async-benchmark ${{ github.ref_name }}
-
-            ### 📦 Installation
-            ```bash
-            pip install pytest-async-benchmark==${{ needs.validate-release.outputs.version }}
-            # or
-            uv add pytest-async-benchmark==${{ needs.validate-release.outputs.version }}
-            ```
-
-            ### 🔗 Links
-            - **PyPI:** https://pypi.org/project/pytest-async-benchmark/${{ needs.validate-release.outputs.version }}/
-            - **Documentation:** https://github.com/${{ github.repository }}#readme
-
-            For detailed changes, see the commit history.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRERELEASE_FLAG=""
+          if [ "${{ needs.validate-release.outputs.is-prerelease }}" == "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file notes.md \
+            --verify-tag \
+            $PRERELEASE_FLAG
 
   post-release:
     name: Post-Release Tasks

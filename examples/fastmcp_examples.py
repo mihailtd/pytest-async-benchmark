@@ -2,7 +2,7 @@
 
 `fastmcp.Client(server)` talks to the server object in memory: no subprocess,
 no stdio, no HTTP. You measure your tool's code plus the MCP protocol layer.
-Requires Python 3.10+ and `fastmcp`.
+Requires `fastmcp`.
 
 Run with:
     uv run pytest examples/fastmcp_examples.py -v
