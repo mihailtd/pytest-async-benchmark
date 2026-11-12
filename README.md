@@ -12,6 +12,10 @@ Modern pytest benchmarking for async code with beautiful terminal output and adv
 >
 > ✍️ **Deep Dive**: Read [Why I Built pytest-async-benchmark: Real Latency Distributions for Async Python](https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/) on [mihai.ltd](https://mihai.ltd).
 
+<p align="center">
+  <img src="screenshot.png" alt="pytest-async-benchmark Terminal Output" width="850" />
+</p>
+
 ## ✨ Features
 
 - 🎯 **Async-First**: Designed specifically for benchmarking `async def` functions
@@ -665,45 +669,39 @@ All times are in seconds. With `leak_check` enabled, results also include `leake
 
 ## 🎨 Beautiful Terminal Output
 
-### Basic Benchmark Output
+`pytest-async-benchmark` formats terminal reports using [Rich](https://github.com/Textualize/rich) with full TrueColor support, ANSI box drawings, and status indicators.
 
-```
-   🚀 Async Benchmark Results:
-        test_my_function
-┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
-┃ Metric     ┃ Value            ┃
-┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
-│ Min        │ 10.048ms         │
-│ Median     │ 10.066ms         │
-│ Mean       │ 10.072ms         │
-│ p95        │ 10.084ms         │
-│ p99        │ 10.143ms         │
-│ Max        │ 10.513ms         │
-│ Std Dev    │ 45.789μs         │
-│ Ops/sec    │ 99.3             │
-│ Samples    │ 100              │
-│ Rounds     │ 100 (calibrated) │
-│ Iterations │ 1                │
-└────────────┴──────────────────┘
-✅ Benchmark completed successfully!
-```
+### 1. Calibrated Benchmark Output
 
-### A vs B Comparison Output
+Every call is timed individually. When `rounds` is omitted, auto-calibration measures continuously for your target time budget (default 1.0s) and computes true percentiles:
 
-```
-⚖️  A vs B Comparison Results
-┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━┓
-┃ Scenario                ┃ Algorithm A ┃ Algorithm B ┃ Winner    ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━┩
-│ Mean Time              │ 2.456ms     │ 1.789ms     │ B 🏆      │
-│ Median Time            │ 2.234ms     │ 1.678ms     │ B 🏆      │
-│ 95th Percentile        │ 3.456ms     │ 2.345ms     │ B 🏆      │
-│ Standard Deviation     │ 0.567ms     │ 0.234ms     │ B 🏆      │
-│ Performance Grade      │ B (76.2)    │ A (89.1)    │ B 🏆      │
-│ Improvement            │ -           │ 27.2%       │ -         │
-└─────────────────────────┴─────────────┴─────────────┴───────────┘
-🏆 Winner: Algorithm B (27.2% faster)
-```
+<p align="center">
+  <img src="docs/public/screenshots/benchmark-results.png" alt="Async Benchmark Terminal Output" width="750" />
+</p>
+
+### 2. Concurrency & Load Benchmark Output
+
+`async_benchmark.concurrent()` tests throughput under concurrent load with N tasks in flight, reporting latency percentiles, error/timeout rates, and event loop lag:
+
+<p align="center">
+  <img src="docs/public/screenshots/concurrency-results.png" alt="Async Concurrency Benchmark Terminal Output" width="750" />
+</p>
+
+### 3. A vs B Side-by-Side Comparisons
+
+Side-by-side comparison tables calculate percentage differences across every percentile metric and identify the winning implementation:
+
+<p align="center">
+  <img src="docs/public/screenshots/comparison-results.png" alt="A vs B Comparison Terminal Output" width="780" />
+</p>
+
+### 4. CI Baseline & Regression Detection
+
+`--async-bench-compare` compares current test runs against a saved baseline and runs a one-sided Mann-Whitney U test to separate actual regressions from random noise:
+
+<p align="center">
+  <img src="docs/public/screenshots/regression-results.png" alt="CI Regression Check Terminal Output" width="820" />
+</p>
 
 ## 🏗️ Project Structure
 

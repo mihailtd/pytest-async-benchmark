@@ -49,6 +49,8 @@ async def test_under_load(async_benchmark):
     assert stats.p95 < 0.015  # Under 15ms under load
 ```
 
+![Async Concurrency Terminal Results](/screenshots/concurrency-results.png)
+
 ## Result Fields: `ConcurrentBenchmarkResult`
 
 The returned result object provides comprehensive load performance data:

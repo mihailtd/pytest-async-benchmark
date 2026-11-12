@@ -39,15 +39,7 @@ pytest --async-bench-compare=0001
 
 Pytest prints a side-by-side terminal comparison table highlighting percentage changes:
 
-```text
-Comparison with baseline 0001_initial:
-╭────────────────────────┬─────────────┬─────────────┬─────────────┬────────────╮
-│ Benchmark              │ Baseline    │ Current     │ Delta       │ Status     │
-├────────────────────────┼─────────────┼─────────────┼─────────────┼────────────┤
-│ test_query_fast        │ 1.25 ms     │ 1.10 ms     │ -12.0%      │ 🚀 FASTER  │
-│ test_heavy_processing  │ 15.4 ms     │ 18.2 ms     │ +18.2%      │ ⚠️ SLOWER  │
-╰────────────────────────┴─────────────┴─────────────┴─────────────┴────────────╯
-```
+![Baseline Regression Check Terminal Output](/screenshots/regression-results.png)
 
 ## Failing CI on Regressions
 

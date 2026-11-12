@@ -46,6 +46,8 @@ async def test_implementation_bakeoff():
     assert diff_pct > 50.0  # Approach B is over 50% faster
 ```
 
+![A vs B Comparison Terminal Output](/screenshots/comparison-results.png)
+
 ## Quick Compare (Dictionary of Scenarios)
 
 To compare three or more implementations simultaneously:

@@ -79,6 +79,10 @@ async def test_fetch_latency(async_benchmark):
     assert result["ops"] > 100
 ```
 
+<div class="home-figure">
+  <img src="/screenshots/benchmark-results.png" alt="pytest-async-benchmark terminal output" />
+</div>
+
 </section>
 
 <section class="home-section">
@@ -115,6 +119,10 @@ flowchart LR
     D --> F["Percentiles (p50-p99) & Ops/sec"]
     E --> G["Task Leak Detection"]
 ```
+
+<div class="home-figure">
+  <img src="/screenshots/concurrency-results.png" alt="pytest-async-benchmark concurrency results" />
+</div>
 
 </section>
 
