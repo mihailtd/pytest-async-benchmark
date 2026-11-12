@@ -307,8 +307,19 @@ jobs:
           python -m venv test-env
           source test-env/bin/activate
 
-          # Install from PyPI
-          pip install pytest-async-benchmark==$VERSION
+          # Install from PyPI. pip reads the CDN-cached simple index, which can
+          # lag the JSON API checked above by a minute or two, so retry.
+          for i in {1..10}; do
+            if pip install --no-cache-dir pytest-async-benchmark==$VERSION; then
+              break
+            fi
+            if [ $i -eq 10 ]; then
+              echo "❌ Could not install $VERSION from PyPI"
+              exit 1
+            fi
+            echo "⏳ Not installable yet, retrying in 30 seconds..."
+            sleep 30
+          done
 
           # Test basic functionality
           python -c "
