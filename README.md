@@ -2,6 +2,16 @@
 
 Modern pytest benchmarking for async code with beautiful terminal output and advanced comparison tools.
 
+[![PyPI version](https://img.shields.io/pypi/v/pytest-async-benchmark.svg)](https://pypi.org/project/pytest-async-benchmark/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-async-benchmark.svg)](https://pypi.org/project/pytest-async-benchmark/)
+[![Documentation](https://img.shields.io/badge/docs-GitHub_Pages-blue.svg)](https://mihailtd.github.io/pytest-async-benchmark/)
+[![Blog](https://img.shields.io/badge/blog-mihai.ltd-blue.svg)](https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> 📖 **Full Documentation**: Visit [https://mihailtd.github.io/pytest-async-benchmark/](https://mihailtd.github.io/pytest-async-benchmark/) for complete guides, concurrency tutorials, and framework examples.
+>
+> ✍️ **Deep Dive**: Read [Why I Built pytest-async-benchmark: Real Latency Distributions for Async Python](https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/) on [mihai.ltd](https://mihai.ltd).
+
 ## ✨ Features
 
 - 🎯 **Async-First**: Designed specifically for benchmarking `async def` functions

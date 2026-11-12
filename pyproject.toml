@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-async-benchmark"
-version = "0.4.0"
+version = "0.4.1"
 description = "pytest-async-benchmark: Modern pytest benchmarking for async code. 🚀"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -16,6 +16,13 @@ dependencies = [
     "pytest>=8.3.5",
     "rich>=14.0.0",
 ]
+
+[project.urls]
+Homepage = "https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/"
+Documentation = "https://mihailtd.github.io/pytest-async-benchmark/"
+Repository = "https://github.com/mihailtd/pytest-async-benchmark"
+Issues = "https://github.com/mihailtd/pytest-async-benchmark/issues"
+Changelog = "https://github.com/mihailtd/pytest-async-benchmark/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 asyncio = [

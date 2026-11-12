@@ -5,6 +5,15 @@ All notable changes to pytest-async-benchmark will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-12
+
+### 📝 Documentation & Links
+- Complete documentation website built with VitePress and deployed to GitHub Pages at https://mihailtd.github.io/pytest-async-benchmark/
+- Added `[project.urls]` in `pyproject.toml` (Documentation, Repository, Issues, Changelog, Homepage)
+- Interactive guides for Concurrency Benchmarking, Pedantic Mode, Task Leak Detection, and CI Regressions
+- Real-world framework guides for FastAPI, FastMCP, Quart, and Aiohttp
+- Architectural deep dive linking to https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/
+
 ## [0.4.0] - 2026-11-12
 
 ### 🚀 Major Features

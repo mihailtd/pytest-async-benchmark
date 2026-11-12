@@ -1,0 +1,16 @@
+{
+  "name": "pytest-async-benchmark-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-docs.mjs",
+    "docs:dev": "node scripts/sync-docs.mjs && vitepress dev docs",
+    "docs:build": "node scripts/sync-docs.mjs && vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "mermaid": "^12.3.0",
+    "vitepress": "2.0.0-alpha.21",
+    "vue": "^3.5.13"
+  }
+}

@@ -1,0 +1,132 @@
+---
+title: Changelog
+description: Release history, new features, and breaking changes for pytest-async-benchmark.
+---
+
+# Changelog
+
+All notable changes to pytest-async-benchmark will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.1] - 2026-11-12
+
+### 📝 Documentation & Links
+- Complete documentation website built with VitePress and deployed to GitHub Pages at https://mihailtd.github.io/pytest-async-benchmark/
+- Added `[project.urls]` in `pyproject.toml` (Documentation, Repository, Issues, Changelog, Homepage)
+- Interactive guides for Concurrency Benchmarking, Pedantic Mode, Task Leak Detection, and CI Regressions
+- Real-world framework guides for FastAPI, FastMCP, Quart, and Aiohttp
+- Architectural deep dive linking to https://mihai.ltd/blog/why-i-built-pytest-async-benchmark/
+
+## [0.4.0] - 2026-11-12
+
+### 🚀 Major Features
+- **Concurrency Benchmarking**: `async_benchmark.concurrent(func, concurrency=..., total=..., timeout=...)` runs calls with N in flight at once and reports throughput, latency percentiles under load, errors, timeouts and event loop lag
+- **Regression Detection**: `--async-bench-autosave` saves numbered runs; `--async-bench-compare` compares against a saved run; `--async-bench-compare-fail=median:10%` fails the session only when a slowdown exceeds the threshold *and* is statistically significant (one-sided Mann-Whitney U test, pure Python)
+- **JSON Export**: `--async-bench-json=PATH` writes every result, including per-call samples, machine info and git commit info
+- **Task Leak Detection**: `leak_check=True` / `"warn"` (or `--async-bench-leak-check`) fails or warns when a benchmark leaves asyncio tasks running
+
+### 🔧 Improvements
+- **Per-call timing**: every call is timed individually; statistics are computed from all calls instead of from per-round averages
+- **Real percentiles**: results now include `p50`, `p75`, `p90`, `p95`, `p99`, plus `ops`, `count`, `total_time`, `samples` and `mode`
+- **Auto calibration**: without `rounds`, measurement runs for a time budget (`max_time`, default 1.0s, at least 5 rounds) instead of a fixed 5 calls; configurable per call, via the marker, or with `--async-bench-max-time`
+- **Config-file settings**: `async_bench_max_time` and `async_bench_leak_check` can be set once in `pyproject.toml` / `pytest.ini` instead of passing flags every run
+- Comparison tables now show p95 and p99
+- New examples: `examples/concurrency_examples.py`, plus concurrency tests in the FastAPI and FastMCP examples
+
+### ⚠️ Breaking changes
+No public function, fixture or result key was removed or renamed, but some behavior changed:
+
+- **Python 3.9 is no longer supported** (end of life since October 2025). pip on Python 3.9 keeps installing 0.3.0.
+- **Default number of calls**: benchmarks without `rounds` now run for ~1 second (at least 5 rounds, at most 10,000) instead of exactly 5 rounds. A fast function is now called hundreds of times instead of 6 (5 rounds + 1 warmup). This makes suites slower and matters if the benchmarked function has side effects (writes rows, sends requests, increments mocks). To restore the old behavior pass `rounds=5`, use `@pytest.mark.async_benchmark(rounds=5)`, or set `--async-bench-max-time=0` (or `async_bench_max_time = "0"` in your pytest config).
+- **Default `result["rounds"]`** is no longer `5` when `rounds` isn't given; it's however many rounds fit the time budget.
+- **Statistics with `iterations > 1`**: `min`, `max`, `median` and `stddev` now describe individual calls instead of round averages, so `max` can be higher and `min` lower than before (`mean` is unchanged). Latency assertions such as `assert result["max"] < 0.01` may need loosening. `raw_times` keeps its old meaning (one mean per round); per-call durations are in the new `samples` key.
+- **`AsyncBenchmarkRunner().rounds`** is now `None` when not given (was `5`).
+- **`rounds=0` / `iterations=0`** now raise `ValueError`. Previously they were silently replaced with 5 and 1.
+- **Terminal output**: the per-benchmark table and comparison tables show different rows (percentiles, ops/sec, samples). Anything parsing that output needs updating; use `--async-bench-json` for machine-readable results.
+
+### 🏗️ Project & CI
+- Tested on Python 3.10-3.14; type annotations modernized (`X | None`)
+- `ty` type checking, ruff lint and format checks enforced in pre-commit and CI
+- GitHub releases are created automatically from the tag, with this changelog as the release notes
+- Dependabot for GitHub Actions and uv dependencies; GitHub Actions bumped to current major versions
+
+### 📝 Documentation
+- FastAPI and FastMCP examples and README sections
+- Removed `grade` and `grade_score` from the documented result keys; they were never returned
+
+## [0.3.0] - 2026-11-10
+
+### 🚀 Major Features
+- **Pedantic Mode**: Added `async_benchmark.pedantic()` (and `AsyncBenchmarkRunner.run_pedantic()`) allowing per-iteration setup and teardown while excluding their duration from benchmark measurements (addresses issue #1)
+- **Flexible Hook Support**: Setup and teardown functions can be synchronous or asynchronous coroutines
+- **Argument Passing**: Return values from `setup` (individual values or unpacked tuples) are passed as arguments to both the target function and `teardown`
+- **Dual Interface Pedantic Support**: Works seamlessly with `await async_benchmark.pedantic(...)` or synchronous `async_benchmark.pedantic(...)`
+
+### 🔧 Improvements & Upgrades
+- **Dependency Upgrades**: Upgraded dependencies to latest versions (pytest 9.x, rich 15.x, ruff 0.17.x, aiohttp 3.14.x, quart 0.23.x, pre-commit 4.7.x)
+- **Modern Python Compatibility**: Fixed `asyncio.iscoroutinefunction` deprecations slated for removal in Python 3.16 by switching to `inspect.iscoroutinefunction` across all modules
+- **Pytest-Asyncio v1.x Compatibility**: Added explicit `asyncio_mode = "auto"` and `asyncio_default_fixture_loop_scope = "function"` configuration in `pyproject.toml`
+- **CI Matrix**: Extended GitHub Actions CI matrix to test on Python 3.13
+
+## [0.2.0] - 2025-05-28
+
+### 🚀 Major Features
+- **Backwards Compatibility**: Automatic interface detection supporting both sync and async usage patterns
+- **pytest-asyncio Integration**: Full compatibility with pytest-asyncio plugin when available
+- **Dual Interface Support**: Works with `await async_benchmark(...)` (with pytest-asyncio) or `result = async_benchmark(...)` (without)
+- **Smart Detection**: Automatically detects pytest-asyncio availability and provides appropriate interface
+
+### ✨ Added
+- Automatic pytest-asyncio detection and interface switching
+- Legacy sync interface support for backwards compatibility with v0.1.x
+- Optional dependency configuration for pytest-asyncio
+- Comprehensive backwards compatibility test suite
+- `_SyncResultWrapper` class for seamless sync interface
+- Enhanced documentation covering both usage patterns
+
+### 🔧 Changed
+- **NON-BREAKING**: pytest-asyncio moved from required to optional dependency
+- `AsyncBenchmarkFixture.__call__` now returns different types based on environment
+- Enhanced fixture to support both sync and async interfaces automatically
+- Updated examples to show both usage patterns
+- README updated with backwards compatibility documentation
+
+### 🛠️ Fixed
+- RuntimeError issues when pytest-asyncio not available
+- Event loop management conflicts in different environments
+- Compatibility issues with projects not using pytest-asyncio
+
+### 📚 Documentation
+- Added pytest-asyncio compatibility section to README
+- Updated all code examples to demonstrate async/await usage
+- Created dedicated pytest-asyncio showcase example
+- Enhanced Quick Start guide with modern async patterns
+
+### 🧪 Testing
+- All 40 tests passing with pytest-asyncio integration
+- Examples thoroughly tested and validated
+- Comprehensive test coverage maintained
+
+---
+
+## [0.1.1] - 2025-05-27
+
+### Initial Features
+- Core async benchmarking functionality
+- Rich console output with beautiful formatting
+- Statistical analysis and comparison tools
+- Multiple examples and comprehensive testing
+
+### Core Components
+- `AsyncBenchmarkFixture` for pytest integration
+- `AsyncBenchmarkRunner` for timing execution
+- `BenchmarkComparator` for performance analysis
+- Rich-based display formatting
+
+### Examples
+- Basic pytest examples
+- Quart API comparison
+- Comparison analysis tools
+- Statistical benchmarking patterns

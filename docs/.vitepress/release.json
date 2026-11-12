@@ -1,0 +1,63 @@
+{
+  "version": "0.4.1",
+  "repo": "https://github.com/mihailtd/pytest-async-benchmark",
+  "pypi": "https://pypi.org/project/pytest-async-benchmark/",
+  "releases": [
+    {
+      "version": "0.4.1",
+      "date": "2026-11-12",
+      "highlights": []
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-11-12",
+      "highlights": [
+        "Concurrency Benchmarking",
+        "Regression Detection",
+        "JSON Export",
+        "Task Leak Detection",
+        "Per-call timing",
+        "Real percentiles",
+        "Auto calibration",
+        "Config-file settings",
+        "Python 3.9 is no longer supported",
+        "Default number of calls",
+        "Default result[\"rounds\"]",
+        "Statistics with iterations > 1",
+        "AsyncBenchmarkRunner().rounds",
+        "rounds=0 / iterations=0",
+        "Terminal output"
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-11-10",
+      "highlights": [
+        "Pedantic Mode",
+        "Flexible Hook Support",
+        "Argument Passing",
+        "Dual Interface Pedantic Support",
+        "Dependency Upgrades",
+        "Modern Python Compatibility",
+        "Pytest-Asyncio v1.x Compatibility",
+        "CI Matrix"
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2025-05-28",
+      "highlights": [
+        "Backwards Compatibility",
+        "pytest-asyncio Integration",
+        "Dual Interface Support",
+        "Smart Detection",
+        "NON-BREAKING"
+      ]
+    },
+    {
+      "version": "0.1.1",
+      "date": "2025-05-27",
+      "highlights": []
+    }
+  ]
+}

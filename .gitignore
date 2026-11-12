@@ -176,3 +176,9 @@ cython_debug/
 
 # pytest-async-benchmark saved runs
 .async_benchmarks/
+
+# Node / VitePress documentation
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+dist/

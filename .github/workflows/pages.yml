@@ -1,0 +1,69 @@
+name: Pages
+
+# Builds the documentation site with VitePress and deploys it to GitHub Pages.
+# Pull requests build the site without deploying to verify links and formatting.
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - README.md
+      - CHANGELOG.md
+      - pyproject.toml
+      - package.json
+      - pnpm-lock.yaml
+      - scripts/sync-docs.mjs
+      - .github/workflows/pages.yml
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push replaces a queued one, a running deployment finishes
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          # the "last updated" date of each page comes from git history
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build docs
+        run: pnpm run docs:build
+        env:
+          SITE_BASE: ${{ vars.PAGES_BASE || format('/{0}/', github.event.repository.name) }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
