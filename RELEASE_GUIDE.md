@@ -77,9 +77,9 @@ Before creating a release, ensure:
 **Steps:**
 1. **Validate Release:** Check version consistency and run tests, lint and type checks
 2. **Test Matrix:** Run tests on Python 3.10-3.14
-3. **Build and Publish:** Build package and publish to PyPI using trusted publishing
+3. **Build and Publish:** Build the package, smoke-test the built wheel in a clean environment, then publish it to PyPI using trusted publishing
 4. **GitHub Release:** Create the release with notes from CHANGELOG.md
-5. **Post-Release:** Verify availability on PyPI and create summary
+5. **Post-Release:** Write a release summary
 
 ## 🔐 PyPI Trusted Publishing Setup
 

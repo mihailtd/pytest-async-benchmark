@@ -199,6 +199,33 @@ jobs:
             echo ""
           done
 
+      # Test the exact files that will be uploaded, before uploading them:
+      # a PyPI version can never be replaced, so this is the last chance.
+      - name: Smoke test the built wheel
+        run: |
+          python -m venv /tmp/wheel-test
+          /tmp/wheel-test/bin/pip install --quiet dist/*.whl
+          mkdir /tmp/smoke && cd /tmp/smoke  # away from the checkout, so src/ isn't imported
+          cat > test_smoke.py <<'PY'
+          import asyncio
+
+          import pytest_async_benchmark
+
+
+          async def work():
+              await asyncio.sleep(0.001)
+
+
+          def test_version():
+              assert pytest_async_benchmark.__version__ == "${{ needs.validate-release.outputs.version }}"
+
+
+          def test_plugin_runs(async_benchmark):
+              result = async_benchmark(work, rounds=3)
+              assert result["rounds"] == 3 and "p99" in result
+          PY
+          /tmp/wheel-test/bin/python -m pytest test_smoke.py -v -p no:cacheprovider
+
       - name: Generate package attestations
         uses: actions/attest-build-provenance@v4
         with:
@@ -278,75 +305,6 @@ jobs:
     if: always() && needs.build-and-publish.result == 'success'
 
     steps:
-      - name: Wait for PyPI availability
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          echo "⏳ Waiting for package to be available on PyPI..."
-
-          for i in {1..10}; do
-            echo "🔍 Attempt $i: Checking PyPI availability..."
-            if curl -s "https://pypi.org/pypi/pytest-async-benchmark/$VERSION/json" | grep -q '"version"'; then
-              echo "✅ Package is available on PyPI!"
-              break
-            else
-              if [ $i -eq 10 ]; then
-                echo "⚠️  Package may not be immediately available on PyPI"
-              else
-                echo "⏳ Not available yet, waiting 30 seconds..."
-                sleep 30
-              fi
-            fi
-          done
-
-      - name: Test installation from PyPI
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          echo "📥 Testing installation from PyPI..."
-
-          # Create fresh environment for testing
-          python -m venv test-env
-          source test-env/bin/activate
-
-          # Install from PyPI. pip reads the CDN-cached simple index, which can
-          # lag the JSON API checked above by a minute or two, so retry.
-          for i in {1..10}; do
-            if pip install --no-cache-dir pytest-async-benchmark==$VERSION; then
-              break
-            fi
-            if [ $i -eq 10 ]; then
-              echo "❌ Could not install $VERSION from PyPI"
-              exit 1
-            fi
-            echo "⏳ Not installable yet, retrying in 30 seconds..."
-            sleep 30
-          done
-
-          # Test basic functionality
-          python -c "
-          import pytest_async_benchmark
-          print(f'✅ Successfully installed from PyPI - version: {pytest_async_benchmark.__version__}')
-
-          # Test pytest plugin
-          import pytest
-          from pytest_async_benchmark.plugin import pytest_configure
-          print('✅ Pytest plugin can be imported')
-
-          # Test basic runner functionality
-          import asyncio
-          from pytest_async_benchmark.runner import AsyncBenchmarkRunner
-
-          async def test_func():
-              await asyncio.sleep(0.001)
-              return 'test'
-
-          async def main():
-              runner = AsyncBenchmarkRunner(rounds=2, iterations=3)
-              result = await runner.run(test_func)
-              print(f'✅ Basic benchmark test passed: {result[\"mean\"]:.4f}s average')
-
-          asyncio.run(main())
-          "
-
       - name: Create release summary
         run: |
           VERSION="${{ needs.validate-release.outputs.version }}"
