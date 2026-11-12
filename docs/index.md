@@ -128,6 +128,40 @@ flowchart LR
 
 <section class="home-section">
 
+<p class="eyebrow">CI Regression Guard</p>
+
+## Catch performance regressions before they land in production
+
+Save historical baselines and prevent silent slowdowns in CI. To eliminate false alarms from noisy cloud runners, `pytest-async-benchmark` applies a one-sided **Mann-Whitney U test** across individual call samples, only failing your pipeline when a regression is both substantive and statistically significant ($p < 0.05$).
+
+```bash
+# Compare against baseline and fail if median latency regresses by >10%
+pytest --async-bench-compare --async-bench-compare-fail=median:10%
+```
+
+<div class="home-figure home-figure-wide">
+  <img src="/screenshots/regression-results.png" alt="pytest-async-benchmark CI regression detection" />
+</div>
+
+<div class="capabilities" style="margin-top: 24px;">
+  <div class="capability">
+    <h3>Zero CI Flakiness</h3>
+    <p>Replaces fragile fixed cutoffs with non-parametric Mann-Whitney U testing, ignoring transient VM neighbor spikes.</p>
+  </div>
+  <div class="capability">
+    <h3>Automated Baselines</h3>
+    <p><code>--async-bench-autosave</code> records numbered runs in <code>.async_benchmarks/</code> with Git commit SHA and host hardware metadata.</p>
+  </div>
+  <div class="capability">
+    <h3>JSON Export</h3>
+    <p>Export all raw percentiles and per-call sample arrays via <code>--async-bench-json</code> for dashboard ingestion and PR comments.</p>
+  </div>
+</div>
+
+</section>
+
+<section class="home-section">
+
 <p class="eyebrow">From the Author</p>
 
 ## Deep dives into async architecture and performance
