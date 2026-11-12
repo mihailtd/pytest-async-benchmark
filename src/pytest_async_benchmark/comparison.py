@@ -5,9 +5,9 @@ This module provides high-level utilities for comparing multiple benchmark resul
 and displaying them in various formats.
 """
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -26,13 +26,13 @@ class BenchmarkScenario:
     func: Callable[[], Awaitable[Any]]
     rounds: int = 5
     iterations: int = 10
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class BenchmarkComparator:
     """High-level utility for comparing multiple benchmarks."""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self.runner = AsyncBenchmarkRunner()
         self.results: list[dict[str, Any]] = []
@@ -43,7 +43,7 @@ class BenchmarkComparator:
         func: Callable[[], Awaitable[Any]],
         rounds: int = 5,
         iterations: int = 10,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> dict[str, Any]:
         """Add and run a benchmark scenario."""
         scenario = BenchmarkScenario(name, func, rounds, iterations, description)
@@ -74,7 +74,7 @@ class BenchmarkComparator:
         display_comparison_table(self.results, title=title, console=self.console)
 
     def display_pairwise_comparison(
-        self, name1: str, name2: str, title: Optional[str] = None
+        self, name1: str, name2: str, title: str | None = None
     ):
         """Display a detailed comparison between two specific scenarios."""
         result1 = next((r for r in self.results if r["name"] == name1), None)
@@ -109,7 +109,7 @@ class BenchmarkComparator:
 
         self.console.print(Panel(analysis_text, title="Performance Summary"))
 
-    def display_performance_grades(self, thresholds: Optional[dict[str, float]] = None):
+    def display_performance_grades(self, thresholds: dict[str, float] | None = None):
         """Display performance grades for all scenarios."""
         if not self.results:
             self.console.print("❌ No results to grade")
@@ -156,14 +156,14 @@ class BenchmarkComparator:
 
         self.console.print(table)
 
-    def get_fastest_scenario(self) -> Optional[dict[str, Any]]:
+    def get_fastest_scenario(self) -> dict[str, Any] | None:
         """Get the scenario with the fastest mean time."""
         if not self.results:
             return None
 
         return min(self.results, key=lambda r: r["result"]["mean"])
 
-    def get_most_stable_scenario(self) -> Optional[dict[str, Any]]:
+    def get_most_stable_scenario(self) -> dict[str, Any] | None:
         """Get the scenario with the lowest standard deviation."""
         if not self.results:
             return None
@@ -195,7 +195,7 @@ class BenchmarkComparator:
 async def quick_compare(
     scenarios: list[BenchmarkScenario],
     title: str = "🚀 Quick Benchmark Comparison",
-    console: Optional[Console] = None,
+    console: Console | None = None,
 ) -> BenchmarkComparator:
     """Run a quick comparison of multiple scenarios."""
     comparator = BenchmarkComparator(console)
@@ -225,7 +225,7 @@ async def a_vs_b_comparison(
     func_b: Callable[[], Awaitable[Any]],
     rounds: int = 10,
     iterations: int = 50,
-    console: Optional[Console] = None,
+    console: Console | None = None,
 ) -> BenchmarkComparator:
     """Quick A vs B comparison utility."""
     comparator = BenchmarkComparator(console)

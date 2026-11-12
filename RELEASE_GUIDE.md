@@ -12,8 +12,9 @@ For most releases, follow these simple steps:
    git checkout main
    git pull origin main
 
-   # Update version in pyproject.toml and __init__.py
+   # Update version in pyproject.toml and src/pytest_async_benchmark/__init__.py
    # Follow semantic versioning: MAJOR.MINOR.PATCH
+   # Rename "## [Unreleased]" in CHANGELOG.md to "## [1.0.0] - YYYY-MM-DD"
    ```
 
 2. **Run release check:**
@@ -29,16 +30,11 @@ For most releases, follow these simple steps:
    git push origin main --tags
    ```
 
-4. **Create GitHub release:**
-   - Go to https://github.com/your-username/pytest-async-benchmark/releases
-   - Click "Create a new release"
-   - Select the tag you just pushed
-   - Add release notes describing changes
-   - Click "Publish release"
-
-5. **Automated publishing:**
-   - GitHub Actions will automatically test and publish to PyPI
-   - Monitor the workflow progress in the Actions tab
+4. **Automated publishing:** pushing the tag is the whole release.
+   - GitHub Actions tests the tag, publishes to PyPI, and creates the GitHub
+     release, using that version's CHANGELOG.md section as the release notes
+   - Don't create the GitHub release by hand: the workflow does it
+   - Monitor the workflow progress in the [Actions tab](https://github.com/mihailtd/pytest-async-benchmark/actions)
    - Package will be available at https://pypi.org/project/pytest-async-benchmark/
 
 ## 📋 Pre-Release Checklist
@@ -48,7 +44,7 @@ Before creating a release, ensure:
 - [ ] All tests pass locally and in CI
 - [ ] Version numbers are updated consistently
 - [ ] README.md is up to date
-- [ ] CHANGELOG.md has entries for the new version (if applicable)
+- [ ] CHANGELOG.md has a `## [X.Y.Z] - YYYY-MM-DD` section (it becomes the release notes)
 - [ ] All example code works with the new version
 - [ ] Documentation reflects any API changes
 - [ ] No uncommitted changes in the repository
@@ -75,14 +71,15 @@ Before creating a release, ensure:
 ### 2. Release Workflow (`release.yml`)
 
 **Triggers:**
-- GitHub release publication
-- Manual workflow dispatch with version input
+- Pushing a `v*` tag
+- Manual workflow dispatch with version input (publishes to PyPI, no GitHub release)
 
 **Steps:**
-1. **Validate Release:** Check version consistency and run comprehensive tests
-2. **Test Matrix:** Run tests on Python 3.9-3.13
+1. **Validate Release:** Check version consistency and run tests, lint and type checks
+2. **Test Matrix:** Run tests on Python 3.10-3.14
 3. **Build and Publish:** Build package and publish to PyPI using trusted publishing
-4. **Post-Release:** Verify availability and create summary
+4. **GitHub Release:** Create the release with notes from CHANGELOG.md
+5. **Post-Release:** Verify availability on PyPI and create summary
 
 ## 🔐 PyPI Trusted Publishing Setup
 
@@ -94,18 +91,13 @@ Before creating a release, ensure:
 2. Click "Add a new pending publisher"
 3. Fill in the details:
    - **PyPI Project Name:** `pytest-async-benchmark`
-   - **Owner:** `your-username` (your GitHub username)
+   - **Owner:** `mihailtd`
    - **Repository name:** `pytest-async-benchmark`
    - **Workflow name:** `release.yml`
-   - **Environment name:** (leave blank)
+   - **Environment name:** `release`
 
-### 2. Update Workflow Files
-
-Replace `your-username` in both workflow files with your actual GitHub username:
-
-```yaml
-if: github.repository_owner == 'your-actual-username'
-```
+TestPyPI needs the same setup at https://test.pypi.org/manage/account/publishing/
+with workflow `test-publish.yml` and no environment.
 
 ## 📦 Version Management
 
@@ -126,8 +118,8 @@ Update version in these files:
 ### Pre-release Versions
 
 For beta/RC releases:
-- Use format: `1.0.0b1`, `1.0.0rc1`
-- GitHub will automatically detect as pre-release
+- Use [PEP 440](https://peps.python.org/pep-0440/) format: `1.0.0b1`, `1.0.0rc1` (not `1.0.0-rc1`)
+- The workflow marks the GitHub release as a pre-release
 - Will be marked as "Pre-release" on PyPI
 
 ## 🧪 Testing Releases
@@ -184,9 +176,8 @@ If you need to release manually (not recommended):
 - Check that git tag matches the version
 
 **PyPI upload fails:**
-- Verify trusted publishing is configured correctly
-- Check that repository owner matches in workflow files
-- Ensure you have the correct permissions
+- Verify trusted publishing is configured correctly (owner, workflow and environment names)
+- A version can only be uploaded once: bump the version instead of re-tagging
 
 **Tests fail in CI:**
 - Run `python scripts/release-check.py` locally first
@@ -243,7 +234,7 @@ git add .
 git commit -m "fix: resolve issue with async timeout handling"
 git tag v1.0.1
 git push origin main --tags
-# Create GitHub release with bug fix notes
+# The workflow publishes to PyPI and creates the GitHub release
 ```
 
 ### Minor Release (New Feature)
@@ -254,7 +245,7 @@ git add .
 git commit -m "feat: add support for custom timeout configuration"
 git tag v1.1.0
 git push origin main --tags
-# Create GitHub release with feature description
+# The workflow publishes to PyPI and creates the GitHub release
 ```
 
 ### Major Release (Breaking Changes)
@@ -267,5 +258,5 @@ git commit -m "feat!: redesign API for better async support
 BREAKING CHANGE: AsyncBenchmarkRunner.run() now returns BenchmarkResult object instead of dict"
 git tag v2.0.0
 git push origin main --tags
-# Create GitHub release with changelog
+# The workflow publishes to PyPI and creates the GitHub release
 ```

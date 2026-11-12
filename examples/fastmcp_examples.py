@@ -2,7 +2,7 @@
 
 `fastmcp.Client(server)` talks to the server object in memory: no subprocess,
 no stdio, no HTTP. You measure your tool's code plus the MCP protocol layer.
-Requires Python 3.10+ and `fastmcp`.
+Requires `fastmcp`.
 
 Run with:
     uv run pytest examples/fastmcp_examples.py -v
@@ -102,3 +102,16 @@ async def test_linear_vs_indexed_search(mcp_client):
     )
 
     assert len(comparator.results) == 2
+
+
+@pytest.mark.asyncio
+async def test_many_agents_calling_tools(async_benchmark, mcp_client):
+    """Simulate 25 agents calling a tool at once through one MCP session."""
+
+    async def call_search():
+        await mcp_client.call_tool("search_indexed", {"query": "async"})
+
+    result = await async_benchmark.concurrent(call_search, concurrency=25, total=250)
+
+    assert result["errors"] == 0
+    assert result["completed"] == 250

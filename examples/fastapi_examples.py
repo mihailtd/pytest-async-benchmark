@@ -1,7 +1,7 @@
 """Benchmarking FastAPI endpoints with pytest-async-benchmark.
 
 The app is called in-process through httpx's ASGITransport: no server, no
-network, no ports. Requires Python 3.10+ and `fastapi` + `httpx`.
+network, no ports. Requires `fastapi` + `httpx`.
 
 Run with:
     uv run pytest examples/fastapi_examples.py -v
@@ -103,3 +103,22 @@ async def test_v1_vs_v2_endpoint(client):
     )
 
     assert len(comparator.results) == 2
+
+
+@pytest.mark.asyncio
+async def test_endpoint_under_concurrency(async_benchmark, client):
+    """50 concurrent clients, 500 requests: latency distribution under load.
+
+    Client and app share this event loop, so throughput is not production
+    capacity; use this to catch contention, pool limits and blocking calls.
+    """
+
+    async def fetch_user():
+        response = await client.get("/users/42")
+        response.raise_for_status()
+
+    result = await async_benchmark.concurrent(fetch_user, concurrency=50, total=500)
+
+    assert result["errors"] == 0
+    assert result["p99"] < 0.5
+    assert result["loop_lag_max"] < 0.1  # nothing blocks the event loop

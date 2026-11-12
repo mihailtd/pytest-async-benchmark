@@ -1,6 +1,6 @@
 """pytest-async-benchmark: Modern pytest benchmarking for async code. 🚀"""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Mihai Farcas"
 __email__ = "contact@mihai.ltd"
 
@@ -12,8 +12,9 @@ from .comparison import (
     quick_compare,
 )
 from .display import display_comparison_table, format_speedup, format_time
-from .plugin import async_benchmark
+from .plugin import TaskLeakError, TaskLeakWarning, async_benchmark
 from .runner import AsyncBenchmarkRunner
+from .stats import compute_stats, percentile
 
 __all__ = [
     "async_benchmark",
@@ -28,4 +29,8 @@ __all__ = [
     "compare_benchmarks",
     "performance_grade",
     "benchmark_summary",
+    "compute_stats",
+    "percentile",
+    "TaskLeakError",
+    "TaskLeakWarning",
 ]

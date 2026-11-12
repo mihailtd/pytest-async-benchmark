@@ -173,3 +173,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 .github/instructions/copilot_instructions.instructions.md
+
+# pytest-async-benchmark saved runs
+.async_benchmarks/
